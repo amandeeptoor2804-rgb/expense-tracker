@@ -1,80 +1,52 @@
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+  import { 
+    getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut 
+  } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
 
-  <title>Expense Tracker</title>
-  <meta name="description" content="Mobile-first PWA to track incomes/expenses from PHC and UBC." />
+  // ✅ Your exact Firebase config (safe in client apps)
+  const firebaseConfig = {
+    apiKey: "AIzaSyB5rvkKPst6V9-7HoqK1f27jQj6x7f8LiA",
+    authDomain: "trading-journal-da4eb.firebaseapp.com",
+    projectId: "trading-journal-da4eb",
+    storageBucket: "trading-journal-da4eb.firebasestorage.app",
+    messagingSenderId: "50906470929",
+    appId: "1:50906470929:web:b9ad784e9ae86c06d42fb0",
+    measurementId: "G-WR261BKTXL"
+  };
 
-  <!-- PWA -->
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#0f172a">
-  <link rel="icon" href="data:image/svg+xml;utf8,<?xml version='1.0' encoding='UTF-8'?><svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'><rect width='256' height='256' fill='%230f172a'/><text x='50%' y='54%' dominant-baseline='middle' text-anchor='middle' font-size='140' fill='white' font-family='Arial, Helvetica, sans-serif'>$</text></svg>'>
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
 
-  <style>
-    body{font-family:Arial, sans-serif; background:#101827; color:white; margin:0; padding:0;}
-    .container{padding:20px;}
-    .card{background:#1E293B; padding:20px; border-radius:12px; margin-top:20px;}
-    input,button{width:100%; padding:10px; margin-top:10px; border-radius:6px; border:none; font-size:16px;}
-    button{background:#22c55e; color:black; font-weight:600; cursor:pointer;}
-  </style>
-</head>
-<body>
+  window.login = function () {
+    const email = document.getElementById("email").value;
+    const password = document.getElementById("password").value;
 
-  <div id="login" class="container">
-    <h2>Login</h2>
-    <input type="email" id="email" placeholder="Email">
-    <input type="password" id="password" placeholder="Password">
-    <button onclick="login()">Login</button>
-  </div>
+    signInWithEmailAndPassword(auth, email, password)
+      .catch(err => alert(err.message));
+  };
 
-  <div id="app" class="container" style="display:none;">
-    <h2>Expense Tracker</h2>
-    <p>You are logged in ✅</p>
-    <button onclick="logout()">Logout</button>
-  </div>
+  window.logout = function () {
+    signOut(auth);
+  };
 
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
-    import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      document.getElementById("login").style.display = "none";
+      document.getElementById("app").style.display = "block";
+    } else {
+      document.getElementById("login").style.display = "block";
+      document.getElementById("app").style.display = "none";
+    }
+  });
+</script>
 
-    // ✅ Your exact Firebase config
-    const firebaseConfig = {
-      apiKey: "AIzaSyB5rvkKPst6V9-7HoqK1f27jQj6x7f8LiA",
-      authDomain: "trading-journal-da4eb.firebaseapp.com",
-      projectId: "trading-journal-da4eb",
-      storageBucket: "trading-journal-da4eb.firebasestorage.app",
-      messagingSenderId: "50906470929",
-      appId: "1:50906470929:web:b9ad784e9ae86c06d42fb0",
-      measurementId: "G-WR261BKTXL"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-
-    window.login = function(){
-      const email = document.getElementById("email").value;
-      const password = document.getElementById("password").value;
-
-      signInWithEmailAndPassword(auth, email, password)
-        .catch(err => alert(err.message));
-    };
-
-    window.logout = function(){
-      signOut(auth);
-    };
-
-    onAuthStateChanged(auth, (user)=>{
-      if(user){
-        document.getElementById("login").style.display="none";
-        document.getElementById("app").style.display="block";
-      } else {
-        document.getElementById("login").style.display="block";
-        document.getElementById("app").style.display="none";
-      }
+<!-- ✅ Service Worker registration -->
+<script>
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("./service-worker.js")
+        .catch(console.error);
     });
-  </script>
-
-</body>
-</html>
+  }
+</script>
