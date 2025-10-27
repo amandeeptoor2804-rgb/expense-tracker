@@ -19,8 +19,55 @@
   .sum{padding:10px;border-radius:12px;background:#0e1530;border:1px solid var(--border);text-align:center}
   .sum .label{font-size:12px;color:var(--muted)} .sum .value{font-size:18px;font-weight:800;margin-top:4px}
   .edit-row input, .edit-row select{padding:6px;font-size:14px}
-  table{width:100%;border-collapse:collapse;margin-top:10px} th,td{padding:8px;border-bottom:1px solid var(--border);font-size:14px}
-  .small{font-size:12px} .hidden{display:none!important} .pill{padding:6px 10px;background:var(--pill);border:1px solid var(--border);border-radius:999px;font-size:12px}
+ table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+th, td {
+  padding: 10px;
+  border-bottom: 1px solid var(--border);
+  font-size: 16px;
+  text-align: center;
+}
+
+td input.edit,
+td select.edit {
+  width: 100%;
+  min-width: 85px;
+  padding: 8px;
+  font-size: 15px;
+  border-radius: 8px;
+  background: #0e1530;
+  color: var(--fg);
+  border: 1px solid var(--border);
+}
+
+td input.edit.amount {
+  min-width: 100px;
+}
+
+td .pill {
+  font-size: 14px;
+  padding: 6px 12px;
+}
+
+th:nth-child(3), td:nth-child(3) {
+  min-width: 100px; /* Amount column */
+}
+
+th:nth-child(4), td:nth-child(4) {
+  min-width: 70px; /* Currency */
+}
+
+th:nth-child(8), td:nth-child(8) {
+  min-width: 150px; /* Notes */
+}
+
+th:nth-child(9), td:nth-child(9) {
+  min-width: 120px; /* Actions */
+} .hidden{display:none!important} .pill{padding:6px 10px;background:var(--pill);border:1px solid var(--border);border-radius:999px;font-size:12px}
 </style>
 </head>
 <body>
