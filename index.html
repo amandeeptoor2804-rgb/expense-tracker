@@ -1,292 +1,309 @@
 <script type="module">
-/* ---------------- Firebase Setup ---------------- */
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
-import { getFirestore, collection, addDoc, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp, query, where } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
-
-// --- Firebase config (yours) ---
-const firebaseConfig = {
-  apiKey: "AIzaSyB5rvkKPst6V9-7HoqK1f27jQj6x7f8LiA",
-  authDomain: "trading-journal-da4eb.firebaseapp.com",
-  projectId: "trading-journal-da4eb",
-  storageBucket: "trading-journal-da4eb.firebasestorage.app",
-  messagingSenderId: "50906470929",
-  appId: "1:50906470929:web:b9ad784e9ae86c06d42fb0",
-  measurementId: "G-WR261BKTXL"
+/* ---- SAFE MODE WRAPPER ---- */
+const showFatal = (msg) => {
+  let el = document.getElementById("fatal");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "fatal";
+    el.style.cssText = "position:fixed;inset:0;z-index:9999;background:#0b1020;color:#fca5a5;padding:16px;overflow:auto;font-family:system-ui";
+    document.body.appendChild(el);
+  }
+  el.innerHTML = "<h3>⚠ App Error</h3><pre style='white-space:pre-wrap'>"+msg+"</pre>";
 };
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+try {
+  /* ---------------- Firebase Setup ---------------- */
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+  import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+  import { getFirestore, collection, addDoc, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp, query, where } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
-const $ = (id)=>document.getElementById(id);
-
-// --- DOM refs ---
-const loginCard = $("loginCard");
-const appCard = $("appCard");
-const err = $("err");
-
-const bankCur=$("bankCur"), cibcCur=$("cibcCur"), scotiaCur=$("scotiaCur"),
-      pcoCur=$("pcoCur"), caponeCur=$("caponeCur");
-
-const bankStart=$("bankStart"), cibcStart=$("cibcStart"), scotiaStart=$("scotiaStart"),
-      pcoStart=$("pcoStart"), caponeStart=$("caponeStart");
-
-const filterType=$("filterType");
-const filterCat=$("filterCat");
-const rowsEl=$("rows");
-
-// Add/visibility rows
-const typeRadios = Array.from(document.querySelectorAll('input[name="entType"]'));
-const incomeRow = document.getElementById("incomeRow");
-const expenseRow = document.getElementById("expenseRow");
-const categoryInput = document.getElementById("category");
-const expCardSelect = document.getElementById("expCardSelect");
-
-function fmt(n){ return `$${(Number(n)||0).toFixed(2)}`; }
-function today(){ return new Date().toISOString().slice(0,10); }
-$("date").value = today();
-
-/* ---------------- Auth ---------------- */
-$("loginBtn").addEventListener("click", async ()=>{
-  err.textContent="";
-  try{
-    await signInWithEmailAndPassword(auth,$("email").value.trim(),$("password").value);
-  }catch(e){ err.textContent=e.message; }
-});
-$("logoutBtn").addEventListener("click", ()=>signOut(auth));
-
-onAuthStateChanged(auth, async (user)=>{
-  if(user){
-    loginCard.classList.add("hidden");
-    appCard.classList.remove("hidden");
-    await ensureAccountSetup(user.uid);
-    updateFormVisibility(); // ensure correct set on entry
-    await refreshAll();
-  } else {
-    loginCard.classList.remove("hidden");
-    appCard.classList.add("hidden");
-  }
-});
-
-/* ---------------- One-time account docs ---------------- */
-async function ensureAccountSetup(uid){
-  const ACC = [
-    {id:"bank", name:"Bank", type:"bank"},
-    {id:"cibc", name:"CIBC", type:"card"},
-    {id:"scotia", name:"Scotia", type:"card"},
-    {id:"pco", name:"PC Optimum", type:"card"},
-    {id:"capone", name:"Capital One", type:"card"}
-  ];
-  for(const a of ACC){
-    const ref = doc(db,"accounts",`${uid}_${a.id}`);
-    const snap = await getDoc(ref);
-    if(!snap.exists()){
-      await setDoc(ref,{
-        ownerUid: uid,
-        type:a.type,name:a.name,
-        startingBalance:0,currency:"CAD",
-        timestamp: serverTimestamp()
-      });
-    }
-  }
-}
-
-/* ---------------- Show/Hide fields per type ---------------- */
-function updateFormVisibility() {
-  const t = document.querySelector('input[name="entType"]:checked')?.value || "income";
-
-  if (t === "income") {
-    incomeRow.classList.remove("hidden");
-    expenseRow.classList.add("hidden");
-    categoryInput.classList.add("hidden");
-    expCardSelect.classList.add("hidden");
-  } else if (t === "expense") {
-    incomeRow.classList.add("hidden");
-    expenseRow.classList.remove("hidden");
-    categoryInput.classList.remove("hidden");
-    expCardSelect.classList.add("hidden");
-  } else { // transfer
-    incomeRow.classList.add("hidden");
-    expenseRow.classList.remove("hidden");
-    categoryInput.classList.add("hidden");
-    expCardSelect.classList.remove("hidden");
-  }
-}
-typeRadios.forEach(r => r.addEventListener("change", updateFormVisibility));
-document.addEventListener("DOMContentLoaded", updateFormVisibility);
-
-/* ---------------- Add Entry ---------------- */
-$("addBtn").addEventListener("click", async ()=>{
-  const user = auth.currentUser;
-  if(!user){ alert("Not signed in."); return; }
-
-  const t = document.querySelector('input[name="entType"]:checked').value;
-  const amt = Number($("amount").value||0);
-  if(amt<=0){ alert("Enter valid amount"); return; }
-
-  const base = {
-    ownerUid:user.uid,
-    date:$("date").value,
-    amount:amt,
-    currency:$("currency").value,
-    timestamp:serverTimestamp()
+  // Firebase config
+  const firebaseConfig = {
+    apiKey: "AIzaSyB5rvkKPst6V9-7HoqK1f27jQj6x7f8LiA",
+    authDomain: "trading-journal-da4eb.firebaseapp.com",
+    projectId: "trading-journal-da4eb",
+    storageBucket: "trading-journal-da4eb.firebasestorage.app",
+    messagingSenderId: "50906470929",
+    appId: "1:50906470929:web:b9ad784e9ae86c06d42fb0",
+    measurementId: "G-WR261BKTXL"
   };
 
-  if(t === "income"){
-    await addDoc(collection(db,"incomes"),{...base,source:$("incSource").value});
-  }
-  else if(t === "expense"){
-    await addDoc(collection(db,"expenses"),{
-      ...base, payType:"debit", category:($("category").value||"-")
-    });
-  }
-  else if(t === "transfer"){ // Deposit to Credit Card
-    await addDoc(collection(db,"expenses"),{
-      ...base,
-      payType:"credit",
-      category:"Credit Payment",
-      card:$("expCardSelect").value
-    });
-  }
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
 
-  $("amount").value = "";
-  $("category").value = "";
-  await refreshAll();
-});
+  const $ = (id)=>document.getElementById(id);
 
-/* ---------------- Load + compute ---------------- */
-async function refreshAll(){
-  const uid = auth.currentUser.uid;
-  const [incSnap,expSnap] = await Promise.all([
-    getDocs(query(collection(db,"incomes"),where("ownerUid","==",uid))),
-    getDocs(query(collection(db,"expenses"),where("ownerUid","==",uid)))
-  ]);
+  // DOM refs
+  const loginCard = $("loginCard");
+  const appCard = $("appCard");
+  const err = $("err");
 
-  const incomes = incSnap.docs.map(d=>({id:d.id,...d.data()}));
-  const expenses= expSnap.docs.map(d=>({id:d.id,...d.data()}));
+  const bankCur=$("bankCur"), cibcCur=$("cibcCur"), scotiaCur=$("scotiaCur"),
+        pcoCur=$("pcoCur"), caponeCur=$("caponeCur");
 
-  await loadAccounts(uid,incomes,expenses);
-  rebuildRows(incomes,expenses);
-}
+  const bankStart=$("bankStart"), cibcStart=$("cibcStart"), scotiaStart=$("scotiaStart"),
+        pcoStart=$("pcoStart"), caponeStart=$("caponeStart");
 
-async function loadAccounts(uid,incomes,expenses){
-  const ids=["bank","cibc","scotia","pco","capone"];
-  const accounts={};
-  for(const id of ids){
-    const snap = await getDoc(doc(db,"accounts",`${uid}_${id}`));
-    accounts[id]= snap.data()?.startingBalance||0;
-  }
+  const filterType=$("filterType");
+  const filterCat=$("filterCat");
+  const rowsEl=$("rows");
 
-  let cur={...accounts};
+  // Add/visibility rows
+  const typeRadios = Array.from(document.querySelectorAll('input[name="entType"]'));
+  const incomeRow = document.getElementById("incomeRow");
+  const expenseRow = document.getElementById("expenseRow");
+  const categoryInput = document.getElementById("category");
+  const expCardSelect = document.getElementById("expCardSelect");
 
-  // Income -> bank up
-  incomes.forEach(i => cur.bank += i.amount);
+  const fmt = (n)=>`$${(Number(n)||0).toFixed(2)}`;
+  const today = ()=> new Date().toISOString().slice(0,10);
+  $("date").value = today();
 
-  // Expense (debit) -> bank down
-  // Transfer (credit) -> card up
-  expenses.forEach(e => {
-    if(e.payType==="debit") cur.bank -= e.amount;
-    if(e.payType==="credit"){
-      const map={ "CIBC":"cibc","Scotia":"scotia","PC Optimum":"pco","Capital One":"capone" };
-      if(map[e.card]) cur[map[e.card]] += e.amount;
+  /* ---------------- AUTH ---------------- */
+  $("loginBtn").addEventListener("click", async ()=>{
+    err.textContent="";
+    try{
+      await signInWithEmailAndPassword(auth,$("email").value.trim(),$("password").value);
+    }catch(e){ err.textContent=e.message; }
+  });
+  $("logoutBtn").addEventListener("click", ()=>signOut(auth));
+
+  onAuthStateChanged(auth, async (user)=>{
+    try{
+      if(user){
+        loginCard.classList.add("hidden");
+        appCard.classList.remove("hidden");
+        await ensureAccountSetup(user.uid);
+        updateFormVisibility();
+        await refreshAll();
+      } else {
+        loginCard.classList.remove("hidden");
+        appCard.classList.add("hidden");
+      }
+    }catch(e){ showFatal("Auth state error: "+(e?.message||e)); }
+  });
+
+  /* ---------------- Ensure account docs ---------------- */
+  async function ensureAccountSetup(uid){
+    const ACC = [
+      {id:"bank", name:"Bank", type:"bank"},
+      {id:"cibc", name:"CIBC", type:"card"},
+      {id:"scotia", name:"Scotia", type:"card"},
+      {id:"pco", name:"PC Optimum", type:"card"},
+      {id:"capone", name:"Capital One", type:"card"}
+    ];
+    for(const a of ACC){
+      const ref = doc(db,"accounts",`${uid}_${a.id}`);
+      const snap = await getDoc(ref);
+      if(!snap.exists()){
+        await setDoc(ref,{
+          ownerUid: uid,
+          type:a.type,name:a.name,
+          startingBalance:0,currency:"CAD",
+          timestamp: serverTimestamp()
+        });
+      }
     }
-  });
-
-  bankCur.textContent=fmt(cur.bank);
-  cibcCur.textContent=fmt(cur.cibc);
-  scotiaCur.textContent=fmt(cur.scotia);
-  pcoCur.textContent=fmt(cur.pco);
-  caponeCur.textContent=fmt(cur.capone);
-
-  // Fill editors with starting balances
-  bankStart.value=accounts.bank;
-  cibcStart.value=accounts.cibc;
-  scotiaStart.value=accounts.scotia;
-  pcoStart.value=accounts.pco;
-  caponeStart.value=accounts.capone;
-}
-
-/* ---------------- Edit balances ---------------- */
-$("editBalancesBtn").addEventListener("click",()=>{
-  $("balanceView").classList.add("hidden");
-  $("balanceEdit").classList.remove("hidden");
-  $("editBalancesBtn").classList.add("hidden");
-  $("saveBalancesBtn").classList.remove("hidden");
-});
-
-$("saveBalancesBtn").addEventListener("click",async()=>{
-  const uid=auth.currentUser.uid;
-  const vals=[
-    {id:"bank",val:Number(bankStart.value||0)},
-    {id:"cibc",val:Number(cibcStart.value||0)},
-    {id:"scotia",val:Number(scotiaStart.value||0)},
-    {id:"pco",val:Number(pcoStart.value||0)},
-    {id:"capone",val:Number(caponeStart.value||0)},
-  ];
-  for(const v of vals){
-    await updateDoc(doc(db,"accounts",`${uid}_${v.id}`),{startingBalance:v.val});
   }
-  $("balanceView").classList.remove("hidden");
-  $("balanceEdit").classList.add("hidden");
-  $("editBalancesBtn").classList.remove("hidden");
-  $("saveBalancesBtn").classList.add("hidden");
-  await refreshAll();
-});
 
-/* ---------------- Rows (entries list) ---------------- */
-function rebuildRows(incomes,expenses){
-  const filter=filterType.value;
-  const cat=(filterCat.value||"").toLowerCase();
+  /* ---------------- Show/Hide fields per type ---------------- */
+  function updateFormVisibility() {
+    const picked = document.querySelector('input[name="entType"]:checked');
+    const t = picked ? picked.value : "income";
 
-  const rows=[
-    ...incomes.map(x=>({type:"income",...x})),
-    ...expenses.map(x=>({type:x.category==="Credit Payment"?"transfer":"expense",...x}))
-  ].sort((a,b)=>b.date.localeCompare(a.date));
+    // Income -> PHC/UBC only
+    incomeRow?.classList.toggle("hidden", t!=="income");
 
-  rowsEl.innerHTML="";
-  rows.forEach(item=>{
-    if(filter!=="all"&&item.type!==filter) return;
-    if(cat && item.category && !item.category.toLowerCase().includes(cat)) return;
+    // Expense row container visible for expense or transfer
+    expenseRow?.classList.toggle("hidden", t==="income");
 
-    const tr=document.createElement("tr");
-    tr.innerHTML=`
-      <td>${item.type}</td>
-      <td><input class="edit date" type="date" value="${item.date}"></td>
-      <td><input class="edit amount" type="number" step="0.01" value="${item.amount}"></td>
-      <td>${item.card||"-"}</td>
-      <td><input class="edit category" value="${item.category||"-"}"></td>
-      <td>
-        <button class="saveBtn">Save</button>
-        <button class="delBtn">Delete</button>
-      </td>`;
+    // Category only for expense
+    categoryInput?.classList.toggle("hidden", t!=="expense");
 
-    // Save row
-    tr.querySelector(".saveBtn").addEventListener("click", async()=>{
-      const payload={
-        date:tr.querySelector(".date").value,
-        amount:Number(tr.querySelector(".amount").value||0),
-        category:tr.querySelector(".category").value
-      };
-      const col=item.type==="income"?"incomes":"expenses";
-      await updateDoc(doc(db,col,item.id),payload);
-      await refreshAll();
-    });
+    // Card only for transfer
+    expCardSelect?.classList.toggle("hidden", t!=="transfer");
+  }
+  typeRadios.forEach(r => r.addEventListener("change", updateFormVisibility));
+  document.addEventListener("DOMContentLoaded", updateFormVisibility);
+  updateFormVisibility();
 
-    // Delete row
-    tr.querySelector(".delBtn").addEventListener("click",async()=>{
-      if(!confirm("Delete entry?"))return;
-      const col=item.type==="income"?"incomes":"expenses";
-      await deleteDoc(doc(db,col,item.id));
-      await refreshAll();
-    });
+  /* ---------------- Add Entry ---------------- */
+  $("addBtn").addEventListener("click", async ()=>{
+    const user = auth.currentUser;
+    if(!user){ alert("Not signed in."); return; }
 
-    rowsEl.appendChild(tr);
+    const picked = document.querySelector('input[name="entType"]:checked');
+    const t = picked ? picked.value : "income";
+    const amt = Number($("amount").value||0);
+    if(amt<=0){ alert("Enter valid amount"); return; }
+
+    const base = {
+      ownerUid:user.uid,
+      date:$("date").value,
+      amount:amt,
+      currency:$("currency").value,
+      timestamp:serverTimestamp()
+    };
+
+    if(t === "income"){
+      await addDoc(collection(db,"incomes"),{...base,source:$("incSource").value});
+    }
+    else if(t === "expense"){
+      await addDoc(collection(db,"expenses"),{
+        ...base, payType:"debit", category:($("category").value||"-")
+      });
+    }
+    else if(t === "transfer"){ // Deposit to Credit Card
+      await addDoc(collection(db,"expenses"),{
+        ...base,
+        payType:"credit",
+        category:"Credit Payment",
+        card:$("expCardSelect").value
+      });
+    }
+
+    $("amount").value = "";
+    $("category").value = "";
+    await refreshAll();
   });
+
+  /* ---------------- Load + compute ---------------- */
+  async function refreshAll(){
+    const uid = auth.currentUser.uid;
+
+    const [incSnap,expSnap] = await Promise.all([
+      getDocs(query(collection(db,"incomes"),where("ownerUid","==",uid))),
+      getDocs(query(collection(db,"expenses"),where("ownerUid","==",uid)))
+    ]);
+
+    const incomes = incSnap.docs.map(d=>({id:d.id,...d.data()}));
+    const expenses= expSnap.docs.map(d=>({id:d.id,...d.data()}));
+
+    await loadAccounts(uid,incomes,expenses);
+    rebuildRows(incomes,expenses);
+  }
+
+  async function loadAccounts(uid,incomes,expenses){
+    const ids=["bank","cibc","scotia","pco","capone"];
+    const accounts={};
+    for(const id of ids){
+      const snap = await getDoc(doc(db,"accounts",`${uid}_${id}`));
+      accounts[id]= snap.data()?.startingBalance||0;
+    }
+
+    let cur={...accounts};
+
+    // Income -> bank up
+    incomes.forEach(i => cur.bank += i.amount);
+
+    // Expense (debit) -> bank down
+    // Transfer (credit) -> card up
+    expenses.forEach(e => {
+      if(e.payType==="debit") cur.bank -= e.amount;
+      if(e.payType==="credit"){
+        const map={ "CIBC":"cibc","Scotia":"scotia","PC Optimum":"pco","Capital One":"capone" };
+        if(map[e.card]) cur[map[e.card]] += e.amount;
+      }
+    });
+
+    bankCur.textContent=fmt(cur.bank);
+    cibcCur.textContent=fmt(cur.cibc);
+    scotiaCur.textContent=fmt(cur.scotia);
+    pcoCur.textContent=fmt(cur.pco);
+    caponeCur.textContent=fmt(cur.capone);
+
+    // Fill editors with starting balances
+    bankStart.value=accounts.bank;
+    cibcStart.value=accounts.cibc;
+    scotiaStart.value=accounts.scotia;
+    pcoStart.value=accounts.pco;
+    caponeStart.value=accounts.capone;
+  }
+
+  /* ---------------- Edit balances ---------------- */
+  $("editBalancesBtn").addEventListener("click",()=>{
+    $("balanceView").classList.add("hidden");
+    $("balanceEdit").classList.remove("hidden");
+    $("editBalancesBtn").classList.add("hidden");
+    $("saveBalancesBtn").classList.remove("hidden");
+  });
+
+  $("saveBalancesBtn").addEventListener("click",async()=>{
+    const uid=auth.currentUser.uid;
+    const vals=[
+      {id:"bank",val:Number(bankStart.value||0)},
+      {id:"cibc",val:Number(cibcStart.value||0)},
+      {id:"scotia",val:Number(scotiaStart.value||0)},
+      {id:"pco",val:Number(pcoStart.value||0)},
+      {id:"capone",val:Number(caponeStart.value||0)},
+    ];
+    for(const v of vals){
+      await updateDoc(doc(db,"accounts",`${uid}_${v.id}`),{startingBalance:v.val});
+    }
+    $("balanceView").classList.remove("hidden");
+    $("balanceEdit").classList.add("hidden");
+    $("editBalancesBtn").classList.remove("hidden");
+    $("saveBalancesBtn").classList.add("hidden");
+    await refreshAll();
+  });
+
+  /* ---------------- Rows (entries list) ---------------- */
+  function rebuildRows(incomes,expenses){
+    const filter=filterType.value;
+    const cat=(filterCat.value||"").toLowerCase();
+
+    const rows=[
+      ...incomes.map(x=>({type:"income",...x})),
+      ...expenses.map(x=>({type:x.category==="Credit Payment"?"transfer":"expense",...x}))
+    ].sort((a,b)=>b.date.localeCompare(a.date));
+
+    rowsEl.innerHTML="";
+    rows.forEach(item=>{
+      if(filter!=="all"&&item.type!==filter) return;
+      if(cat && item.category && !item.category.toLowerCase().includes(cat)) return;
+
+      const tr=document.createElement("tr");
+      tr.innerHTML=`
+        <td>${item.type}</td>
+        <td><input class="edit date" type="date" value="${item.date||''}"></td>
+        <td><input class="edit amount" type="number" step="0.01" value="${item.amount||0}"></td>
+        <td>${item.card||"-"}</td>
+        <td><input class="edit category" value="${item.category||"-"}"></td>
+        <td>
+          <button class="saveBtn">Save</button>
+          <button class="delBtn">Delete</button>
+        </td>`;
+
+      // Save row
+      tr.querySelector(".saveBtn").addEventListener("click", async()=>{
+        const payload={
+          date:tr.querySelector(".date").value,
+          amount:Number(tr.querySelector(".amount").value||0),
+          category:tr.querySelector(".category").value
+        };
+        const col=item.type==="income"?"incomes":"expenses";
+        await updateDoc(doc(db,col,item.id),payload);
+        await refreshAll();
+      });
+
+      // Delete row
+      tr.querySelector(".delBtn").addEventListener("click",async()=>{
+        if(!confirm("Delete entry?"))return;
+        const col=item.type==="income"?"incomes":"expenses";
+        await deleteDoc(doc(db,col,item.id));
+        await refreshAll();
+      });
+
+      rowsEl.appendChild(tr);
+    });
+  }
+
+  /* ---------------- Filters ---------------- */
+  filterType.addEventListener("change",refreshAll);
+  filterCat.addEventListener("input",refreshAll);
+
+} catch (e) {
+  showFatal("Top-level error: "+(e?.message||e));
 }
-
-/* ---------------- Filters ---------------- */
-filterType.addEventListener("change",refreshAll);
-filterCat.addEventListener("input",refreshAll);
-
 </script>
