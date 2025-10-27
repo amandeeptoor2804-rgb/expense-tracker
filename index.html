@@ -3,43 +3,208 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+
   <title>Expense Tracker</title>
   <meta name="description" content="Mobile-first PWA to track incomes/expenses from PHC and UBC." />
+
+  <!-- PWA -->
   <link rel="manifest" href="manifest.json" />
   <meta name="theme-color" content="#0f172a" />
+
   <style>
-    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:#101827;color:#fff;margin:0}
-    .container{max-width:520px;margin:0 auto;padding:24px}
-    h2{margin:0 0 12px}
-    .card{background:#1e293b;border:1px solid #2b3b55;border-radius:12px;padding:16px}
-    input,button{width:100%;padding:12px;margin-top:10px;border-radius:8px;border:1px solid #324766;background:#0f172a;color:#fff;font-size:16px}
-    button{background:#22c55e;border-color:#1a7f46;color:#052911;font-weight:700;cursor:pointer}
-    #app{display:none}
+    :root{
+      --bg:#0b1020; --card:#111732; --muted:#94a3b8; --fg:#e2e8f0; --accent:#22c55e; --danger:#ef4444; --warn:#f59e0b;
+      --border:#1f2a44; --pill:#17203c;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+    .wrap{max-width:860px;margin:0 auto;padding:16px}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px}
+    h1{font-size:20px;margin:8px 0 12px}
+    .muted{color:var(--muted)}
+    .grid{display:grid;gap:10px}
+    .grid.cols-2{grid-template-columns:1fr 1fr}
+    .grid.cols-3{grid-template-columns:1fr 1fr 1fr}
+    @media(min-width:720px){ .grid.cols-3{grid-template-columns:1fr 1fr 1fr} }
+    input,select,button,textarea{
+      width:100%;padding:12px;border-radius:10px;border:1px solid var(--border);background:#0e1530;color:var(--fg);font-size:16px
+    }
+    button{background:#1f2a44;cursor:pointer}
+    button.primary{background:var(--accent);border-color:#1b8847;color:#052911;font-weight:700}
+    button.danger{background:#2b0f12;border-color:#512227;color:#ffb4b4}
+    .tabs{display:flex;gap:8px;margin-top:8px}
+    .tab-btn{flex:1;padding:10px;border-radius:10px;background:var(--pill);border:1px solid var(--border);text-align:center;cursor:pointer}
+    .tab-btn.active{background:#0e1530;border-color:#2f3c62}
+    .sum-cards{display:grid;gap:10px;grid-template-columns:1fr 1fr}
+    @media(min-width:560px){ .sum-cards{grid-template-columns:repeat(5,1fr)} }
+    .sum{padding:12px;border-radius:12px;background:#0e1530;border:1px solid var(--border)}
+    .sum .label{font-size:12px;color:var(--muted)}
+    .sum .value{font-size:18px;font-weight:800;margin-top:4px}
+    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .right{text-align:right}
+    .hidden{display:none!important}
+    table{width:100%;border-collapse:collapse;margin-top:8px}
+    th,td{padding:8px;border-bottom:1px solid var(--border);font-size:14px;vertical-align:middle}
+    .small{font-size:12px}
+    .pill{padding:6px 10px;background:var(--pill);border:1px solid var(--border);border-radius:999px;font-size:12px}
+    .note{font-size:12px;color:var(--muted)}
+    canvas{background:#0b122a;border:1px solid var(--border);border-radius:12px;padding:8px}
   </style>
 </head>
 <body>
-  <div class="container">
-    <div id="login" class="card">
-      <h2>Login</h2>
-      <input type="email" id="email" placeholder="Email" autocomplete="username" />
-      <input type="password" id="password" placeholder="Password" autocomplete="current-password" />
-      <button id="loginBtn">Sign In</button>
-      <p id="err" style="color:#fca5a5;margin-top:8px"></p>
-    </div>
+  <div class="wrap">
 
-    <div id="app" class="card">
-      <h2>Expense Tracker</h2>
-      <p>You are logged in ✅</p>
-      <button id="logoutBtn">Logout</button>
-    </div>
-  </div>
+    <!-- Auth -->
+    <section id="auth" class="card">
+      <h1>Expense Tracker — Sign In</h1>
+      <p class="muted small">Email/Password login. Users are created from Firebase Console → Authentication.</p>
+      <div class="grid">
+        <input id="email" type="email" placeholder="Email" autocomplete="username">
+        <input id="password" type="password" placeholder="Password" autocomplete="current-password">
+        <button id="loginBtn" class="primary">Sign In</button>
+        <p id="authError" class="small" style="color:#fca5a5"></p>
+      </div>
+    </section>
 
-  <!-- App logic -->
+    <!-- App -->
+    <section id="app" class="card hidden">
+      <div class="row" style="justify-content:space-between;">
+        <h1>Expense Tracker</h1>
+        <div class="row">
+          <select id="monthSelect"></select>
+          <button id="logoutBtn">Logout</button>
+        </div>
+      </div>
+
+      <!-- Summary -->
+      <div class="sum-cards">
+        <div class="sum"><div class="label">Total Income</div><div id="sumIncome" class="value">$0</div></div>
+        <div class="sum"><div class="label">Total Expenses</div><div id="sumExpenses" class="value">$0</div></div>
+        <div class="sum"><div class="label">Net</div><div id="sumNet" class="value">$0</div></div>
+        <div class="sum"><div class="label">PHC Remaining</div><div id="sumPHC" class="value">$0</div></div>
+        <div class="sum"><div class="label">UBC Remaining</div><div id="sumUBC" class="value">$0</div></div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="tabs" style="margin-top:12px">
+        <div class="tab-btn active" data-tab="add">Add</div>
+        <div class="tab-btn" data-tab="history">History</div>
+      </div>
+
+      <!-- Add Tab -->
+      <div id="tab-add" class="grid" style="margin-top:12px">
+        <div class="row">
+          <span class="pill">Add:</span>
+          <label><input type="radio" name="addType" value="income" checked> Income</label>
+          <label><input type="radio" name="addType" value="expense"> Expense</label>
+        </div>
+
+        <!-- Income form -->
+        <div id="form-income" class="grid cols-2">
+          <input id="inc-date" type="date" />
+          <input id="inc-amount" type="number" step="0.01" placeholder="Amount" />
+          <select id="inc-currency">
+            <option value="CAD">CAD</option>
+            <option value="USD">USD</option>
+          </select>
+          <select id="inc-source">
+            <option value="PHC">PHC</option>
+            <option value="UBC">UBC</option>
+          </select>
+          <select id="inc-method">
+            <option value="card">card</option>
+            <option value="cash">cash</option>
+            <option value="other">other</option>
+          </select>
+          <input id="inc-notes" placeholder="Notes (optional)" />
+          <div class="grid"><button id="addIncomeBtn" class="primary">Add Income</button></div>
+          <p class="note">Fields: date, amount, currency, source (PHC/UBC), method, notes</p>
+        </div>
+
+        <!-- Expense form -->
+        <div id="form-expense" class="grid cols-2 hidden">
+          <input id="exp-date" type="date" />
+          <input id="exp-amount" type="number" step="0.01" placeholder="Amount" />
+          <select id="exp-currency">
+            <option value="CAD">CAD</option>
+            <option value="USD">USD</option>
+          </select>
+          <select id="exp-source">
+            <option value="PHC">PHC</option>
+            <option value="UBC">UBC</option>
+          </select>
+          <input id="exp-category" placeholder="Category (e.g., Groceries, Gas, Rent)" />
+          <select id="exp-method">
+            <option value="card">card</option>
+            <option value="cash">cash</option>
+            <option value="other">other</option>
+          </select>
+          <input id="exp-notes" placeholder="Notes (optional)" />
+          <div class="grid"><button id="addExpenseBtn" class="primary">Add Expense</button></div>
+          <p class="note">Fields: date, amount, currency, source (PHC/UBC), category, method, notes</p>
+        </div>
+      </div>
+
+      <!-- History Tab -->
+      <div id="tab-history" class="hidden" style="margin-top:12px">
+        <div class="grid cols-3">
+          <select id="filter-type">
+            <option value="all">All</option>
+            <option value="income">Income</option>
+            <option value="expense">Expense</option>
+          </select>
+          <select id="filter-source">
+            <option value="all">All Sources</option>
+            <option value="PHC">PHC</option>
+            <option value="UBC">UBC</option>
+          </select>
+          <input id="filter-category" placeholder="Category (expenses only)" />
+        </div>
+
+        <table id="table" class="small">
+          <thead>
+            <tr>
+              <th>Type</th><th>Date</th><th>Amt</th><th>Cur</th><th>Source</th><th>Category</th><th>Method</th><th>Notes</th><th class="right">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+
+        <div class="grid cols-2" style="margin-top:10px">
+          <div class="card">
+            <div class="row" style="justify-content:space-between">
+              <strong>Monthly Net Trend</strong> <span class="pill" id="chartMonthLabel"></span>
+            </div>
+            <canvas id="lineChart" width="400" height="220"></canvas>
+          </div>
+          <div class="card">
+            <div class="row" style="justify-content:space-between">
+              <strong>Category Breakdown (Expenses)</strong> <span class="pill" id="catMonthLabel"></span>
+            </div>
+            <canvas id="doughnutChart" width="400" height="220"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div> <!-- /wrap -->
+
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+  <!-- Firebase & App logic -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
-    import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+    import { 
+      getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut 
+    } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+    import {
+      getFirestore, collection, addDoc, updateDoc, deleteDoc, doc,
+      serverTimestamp, query, where, getDocs
+    } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
-    // 🔒 Your exact Firebase config (client-safe)
+    // ✅ Your exact Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyB5rvkKPst6V9-7HoqK1f27jQj6x7f8LiA",
       authDomain: "trading-journal-da4eb.firebaseapp.com",
@@ -52,37 +217,352 @@
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
+    const db = getFirestore(app);
 
-    const $ = (id) => document.getElementById(id);
-    const loginDiv = $("login");
-    const appDiv = $("app");
-    const err = $("err");
+    // Elements
+    const $ = (id)=>document.getElementById(id);
+    const authSec = $("auth");
+    const appSec = $("app");
+    const authError = $("authError");
+    const monthSelect = $("monthSelect");
+    const tabs = document.querySelectorAll(".tab-btn");
+    const tabAdd = $("tab-add");
+    const tabHistory = $("tab-history");
 
-    $("loginBtn").addEventListener("click", async () => {
-      err.textContent = "";
-      try {
-        const email = $("email").value.trim();
-        const password = $("password").value;
+    // Forms
+    const addTypeInputs = document.querySelectorAll("input[name='addType']");
+    const formIncome = $("form-income");
+    const formExpense = $("form-expense");
+
+    // History/filters
+    const filterType = $("filter-type");
+    const filterSource = $("filter-source");
+    const filterCategory = $("filter-category");
+    const rows = $("rows");
+
+    // Summaries
+    const sumIncome = $("sumIncome");
+    const sumExpenses = $("sumExpenses");
+    const sumNet = $("sumNet");
+    const sumPHC = $("sumPHC");
+    const sumUBC = $("sumUBC");
+
+    // Charts
+    const lineCtx = $("lineChart");
+    const doughnutCtx = $("doughnutChart");
+    let lineChart, doughnutChart;
+
+    // Utils
+    const todayStr = new Date().toISOString().slice(0,10);
+    const ym = (d)=> d.slice(0,7); // YYYY-MM
+
+    function fmt(n, cur="CAD"){ 
+      try { return (new Intl.NumberFormat('en-CA', { style:'currency', currency: cur })).format(n); }
+      catch { return `$${n.toFixed(2)}`; }
+    }
+
+    // Month selector: current + previous 11 months
+    function buildMonthOptions(){
+      monthSelect.innerHTML = "";
+      const now = new Date();
+      for(let i=0;i<12;i++){
+        const dt = new Date(now.getFullYear(), now.getMonth()-i, 1);
+        const y = dt.getFullYear();
+        const m = String(dt.getMonth()+1).padStart(2,'0');
+        const val = `${y}-${m}`;
+        const opt = document.createElement("option");
+        opt.value = val;
+        opt.textContent = dt.toLocaleString('default',{month:'long', year:'numeric'});
+        monthSelect.appendChild(opt);
+      }
+    }
+
+    // Auth handlers
+    $("loginBtn").addEventListener("click", async ()=>{
+      authError.textContent = "";
+      const email = $("email").value.trim();
+      const password = $("password").value;
+      try{
         await signInWithEmailAndPassword(auth, email, password);
-      } catch (e) {
-        err.textContent = e.message || String(e);
+      }catch(e){
+        authError.textContent = e.message || String(e);
+      }
+    });
+    $("logoutBtn").addEventListener("click", ()=>signOut(auth));
+
+    onAuthStateChanged(auth, async (user)=>{
+      if(user){
+        authSec.classList.add("hidden");
+        appSec.classList.remove("hidden");
+        buildMonthOptions();
+        await refreshAll();
+      }else{
+        appSec.classList.add("hidden");
+        authSec.classList.remove("hidden");
       }
     });
 
-    $("logoutBtn").addEventListener("click", () => signOut(auth));
-
-    onAuthStateChanged(auth, (user) => {
-      if (user) {
-        loginDiv.style.display = "none";
-        appDiv.style.display = "block";
-      } else {
-        appDiv.style.display = "none";
-        loginDiv.style.display = "block";
-      }
+    // Tab switching
+    tabs.forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        tabs.forEach(b=>b.classList.remove("active"));
+        btn.classList.add("active");
+        const tab = btn.dataset.tab;
+        tabAdd.classList.toggle("hidden", tab!=="add");
+        tabHistory.classList.toggle("hidden", tab!=="history");
+      });
     });
+
+    // AddType toggle
+    addTypeInputs.forEach(r=>{
+      r.addEventListener("change", ()=>{
+        const val = document.querySelector("input[name='addType']:checked").value;
+        formIncome.classList.toggle("hidden", val!=="income");
+        formExpense.classList.toggle("hidden", val!=="expense");
+      });
+    });
+
+    // Defaults: set date fields to today
+    ["inc-date","exp-date"].forEach(id=>$(id).value = todayStr);
+
+    // Add Income
+    $("addIncomeBtn").addEventListener("click", async ()=>{
+      const user = auth.currentUser; if(!user) return;
+      const data = {
+        ownerUid: user.uid,
+        date: $("inc-date").value,
+        amount: Number($("inc-amount").value || 0),
+        currency: $("inc-currency").value,
+        source: $("inc-source").value,       // PHC/UBC
+        method: $("inc-method").value,       // card/cash/other
+        notes: $("inc-notes").value.trim(),
+        timestamp: serverTimestamp()
+      };
+      if(!data.date || data.amount<=0){ alert("Enter valid date and amount."); return; }
+      await addDoc(collection(db, "incomes"), data);
+      // reset a little
+      $("inc-amount").value = "";
+      $("inc-notes").value = "";
+      await refreshAll();
+      alert("Income added.");
+    });
+
+    // Add Expense
+    $("addExpenseBtn").addEventListener("click", async ()=>{
+      const user = auth.currentUser; if(!user) return;
+      const data = {
+        ownerUid: user.uid,
+        date: $("exp-date").value,
+        amount: Number($("exp-amount").value || 0),
+        currency: $("exp-currency").value,
+        source: $("exp-source").value,       // PHC/UBC
+        category: $("exp-category").value.trim(),
+        method: $("exp-method").value,
+        notes: $("exp-notes").value.trim(),
+        timestamp: serverTimestamp()
+      };
+      if(!data.date || data.amount<=0){ alert("Enter valid date and amount."); return; }
+      if(!data.category){ alert("Enter category."); return; }
+      await addDoc(collection(db, "expenses"), data);
+      $("exp-amount").value = "";
+      $("exp-category").value = "";
+      $("exp-notes").value = "";
+      await refreshAll();
+      alert("Expense added.");
+    });
+
+    // Load all owner docs; filter by month client-side to avoid index requirements
+    async function loadAllDocs(){
+      const user = auth.currentUser; if(!user) return { incomes:[], expenses:[] };
+      const [incSnap, expSnap] = await Promise.all([
+        getDocs(query(collection(db,"incomes"), where("ownerUid","==",user.uid))),
+        getDocs(query(collection(db,"expenses"), where("ownerUid","==",user.uid)))
+      ]);
+      const incomes = incSnap.docs.map(d=>({id:d.id, ...d.data()}));
+      const expenses = expSnap.docs.map(d=>({id:d.id, ...d.data()}));
+      return { incomes, expenses };
+    }
+
+    function filterByMonth(items, month){ // month = 'YYYY-MM'
+      return items.filter(it => typeof it.date === 'string' && ym(it.date) === month);
+    }
+
+    function summarize(monthIncomes, monthExpenses){
+      // We’ll compute totals per currency first
+      const sum = (arr)=>arr.reduce((a,x)=>a+(Number(x.amount)||0),0);
+
+      const incCAD = sum(monthIncomes.filter(x=>x.currency==='CAD'));
+      const incUSD = sum(monthIncomes.filter(x=>x.currency==='USD'));
+      const expCAD = sum(monthExpenses.filter(x=>x.currency==='CAD'));
+      const expUSD = sum(monthExpenses.filter(x=>x.currency==='USD'));
+
+      // Display: keep currencies separate (no conversion)
+      sumIncome.textContent = `CAD ${incCAD.toFixed(2)} | USD ${incUSD.toFixed(2)}`;
+      sumExpenses.textContent = `CAD ${expCAD.toFixed(2)} | USD ${expUSD.toFixed(2)}`;
+      sumNet.textContent = `CAD ${(incCAD-expCAD).toFixed(2)} | USD ${(incUSD-expUSD).toFixed(2)}`;
+
+      // PHC/UBC remaining for the month (earned - spent), per currency, but show combined text
+      const phcEarn = sum(monthIncomes.filter(x=>x.source==='PHC'));
+      const phcSpend = sum(monthExpenses.filter(x=>x.source==='PHC'));
+      const ubcEarn = sum(monthIncomes.filter(x=>x.source==='UBC'));
+      const ubcSpend = sum(monthExpenses.filter(x=>x.source==='UBC'));
+      sumPHC.textContent = (phcEarn - phcSpend).toFixed(2);
+      sumUBC.textContent = (ubcEarn - ubcSpend).toFixed(2);
+    }
+
+    function rebuildTable(monthIncomes, monthExpenses){
+      const typeFilter = filterType.value;
+      const sourceFilter = filterSource.value;
+      const catFilter = filterCategory.value.trim().toLowerCase();
+
+      const rowsData = [
+        ...monthIncomes.map(x=>({type:'income', ...x})),
+        ...monthExpenses.map(x=>({type:'expense', ...x}))
+      ].sort((a,b)=> (a.date||'').localeCompare(b.date||''));
+
+      rows.innerHTML = "";
+
+      rowsData.forEach(item=>{
+        if(typeFilter!=='all' && item.type!==typeFilter) return;
+        if(sourceFilter!=='all' && item.source!==sourceFilter) return;
+        if(item.type==='expense' && catFilter && !(item.category||'').toLowerCase().includes(catFilter)) return;
+
+        const tr = document.createElement("tr");
+        tr.dataset.id = item.id; tr.dataset.type = item.type;
+
+        const cat = item.type==='expense' ? (item.category||'') : '';
+        tr.innerHTML = `
+          <td>${item.type}</td>
+          <td><input class="edit date" type="date" value="${item.date||''}"></td>
+          <td><input class="edit amount" type="number" step="0.01" value="${item.amount||0}"></td>
+          <td>
+            <select class="edit currency">
+              <option ${item.currency==='CAD'?'selected':''}>CAD</option>
+              <option ${item.currency==='USD'?'selected':''}>USD</option>
+            </select>
+          </td>
+          <td>
+            <select class="edit source">
+              <option ${item.source==='PHC'?'selected':''}>PHC</option>
+              <option ${item.source==='UBC'?'selected':''}>UBC</option>
+            </select>
+          </td>
+          <td>${ item.type==='expense' ? `<input class="edit category" value="${cat}">` : `<span class="small pill">—</span>`}</td>
+          <td>
+            <select class="edit method">
+              <option ${item.method==='card'?'selected':''}>card</option>
+              <option ${item.method==='cash'?'selected':''}>cash</option>
+              <option ${item.method==='other'?'selected':''}>other</option>
+            </select>
+          </td>
+          <td><input class="edit notes" value="${item.notes||''}"></td>
+          <td class="right">
+            <button class="saveBtn">Save</button>
+            <button class="danger deleteBtn">Delete</button>
+          </td>
+        `;
+
+        // Save
+        tr.querySelector(".saveBtn").addEventListener("click", async ()=>{
+          const id = tr.dataset.id;
+          const type = tr.dataset.type;
+          const payload = {
+            date: tr.querySelector(".edit.date").value,
+            amount: Number(tr.querySelector(".edit.amount").value||0),
+            currency: tr.querySelector(".edit.currency").value,
+            source: tr.querySelector(".edit.source").value,
+            method: tr.querySelector(".edit.method").value,
+            notes: tr.querySelector(".edit.notes").value,
+          };
+          if(type==='expense'){
+            payload.category = tr.querySelector(".edit.category").value;
+          }
+          const ref = doc(db, type==='income' ? "incomes":"expenses", id);
+          await updateDoc(ref, payload);
+          alert("Updated.");
+          await refreshAll();
+        });
+
+        // Delete
+        tr.querySelector(".deleteBtn").addEventListener("click", async ()=>{
+          if(!confirm("Delete this entry?")) return;
+          const id = tr.dataset.id;
+          const type = tr.dataset.type;
+          await deleteDoc(doc(db, type==='income' ? "incomes":"expenses", id));
+          await refreshAll();
+        });
+
+        rows.appendChild(tr);
+      });
+    }
+
+    function rebuildCharts(month, monthIncomes, monthExpenses){
+      $("chartMonthLabel").textContent = month;
+      $("catMonthLabel").textContent = month;
+
+      // Line chart: cumulative net per day within month (income - expenses, all currencies combined numerically)
+      const daysInMonth = new Date(Number(month.slice(0,4)), Number(month.slice(5,7)), 0).getDate();
+      const labels = Array.from({length:daysInMonth}, (_,i)=> String(i+1).padStart(2,'0'));
+      const byDay = {};
+      labels.forEach(d=>byDay[d]=0);
+
+      monthIncomes.forEach(x=>{
+        const d = x.date.slice(8,10);
+        byDay[d] += Number(x.amount)||0;
+      });
+      monthExpenses.forEach(x=>{
+        const d = x.date.slice(8,10);
+        byDay[d] -= Number(x.amount)||0;
+      });
+
+      let cumulative = 0;
+      const data = labels.map(d=>{
+        cumulative += byDay[d];
+        return cumulative;
+      });
+
+      if(lineChart) lineChart.destroy();
+      lineChart = new Chart(lineCtx, {
+        type:'line',
+        data:{ labels, datasets:[{ label:'Cumulative Net', data, tension:0.2 }] },
+        options:{ responsive:true, plugins:{ legend:{ display:false } } }
+      });
+
+      // Doughnut: expenses by category
+      const catMap = {};
+      monthExpenses.forEach(x=>{
+        const c = (x.category||'Other').trim() || 'Other';
+        catMap[c] = (catMap[c]||0) + (Number(x.amount)||0);
+      });
+      const catLabels = Object.keys(catMap);
+      const catData = Object.values(catMap);
+
+      if(doughnutChart) doughnutChart.destroy();
+      doughnutChart = new Chart(doughnutCtx, {
+        type:'doughnut',
+        data:{ labels:catLabels, datasets:[{ data:catData }] },
+        options:{ responsive:true, plugins:{ legend:{ position:'bottom' } } }
+      });
+    }
+
+    async function refreshAll(){
+      const { incomes, expenses } = await loadAllDocs();
+      const month = monthSelect.value || ym(todayStr);
+      const mIncomes = filterByMonth(incomes, month);
+      const mExpenses = filterByMonth(expenses, month);
+
+      summarize(mIncomes, mExpenses);
+      rebuildTable(mIncomes, mExpenses);
+      rebuildCharts(month, mIncomes, mExpenses);
+    }
+
+    monthSelect.addEventListener("change", refreshAll);
+    filterType.addEventListener("change", refreshAll);
+    filterSource.addEventListener("change", refreshAll);
+    filterCategory.addEventListener("input", refreshAll);
   </script>
 
-  <!-- Service worker registration -->
+  <!-- Service Worker registration -->
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
