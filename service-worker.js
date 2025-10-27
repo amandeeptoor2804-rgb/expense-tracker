@@ -1,5 +1,5 @@
 // service-worker.js — Expense Tracker
-const CACHE_VERSION = 'v1.0.0';
+const CACHE_VERSION = 'v1.0.1';
 const CACHE_NAME = `expense-tracker-${CACHE_VERSION}`;
 const APP_SHELL = [
   './',
