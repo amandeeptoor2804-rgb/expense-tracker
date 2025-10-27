@@ -125,7 +125,38 @@ function updateFormVisibility() {
   }
 }
 typeRadios.forEach(r => r.addEventListener("change", updateFormVisibility));
+// --- Show/Hide the proper fields based on selected type (v6.4) ---
+const typeRadios = Array.from(document.querySelectorAll("input[name='entType']"));
+const incomeRow = document.getElementById("incomeRow");
+const expenseRow = document.getElementById("expenseRow");
+const categoryInput = document.getElementById("category");
+const expCardSelect = document.getElementById("expCardSelect");
 
+function updateFormVisibility() {
+  const t = document.querySelector("input[name='entType']:checked")?.value || "income";
+
+  if (t === "income") {
+    incomeRow.classList.remove("hidden");
+    expenseRow.classList.add("hidden");
+    categoryInput.classList.add("hidden");
+    expCardSelect.classList.add("hidden");
+  } else if (t === "expense") {
+    incomeRow.classList.add("hidden");
+    expenseRow.classList.remove("hidden");
+    categoryInput.classList.remove("hidden");
+    expCardSelect.classList.add("hidden");
+  } else { // transfer (Deposit to Credit Card)
+    incomeRow.classList.add("hidden");
+    expenseRow.classList.remove("hidden");
+    categoryInput.classList.add("hidden");
+    expCardSelect.classList.remove("hidden");
+  }
+}
+
+// hook up listeners + set initial state
+typeRadios.forEach(r => r.addEventListener("change", updateFormVisibility));
+document.addEventListener("DOMContentLoaded", updateFormVisibility);
+updateFormVisibility();
 /* ---------------- Add Entry ---------------- */
 $("addBtn").addEventListener("click", async ()=>{
   const user = auth.currentUser;
