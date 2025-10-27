@@ -1,574 +1,492 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-
-  <title>Expense Tracker</title>
-  <meta name="description" content="Mobile-first PWA to track incomes/expenses from PHC and UBC." />
-
-  <!-- PWA -->
-  <link rel="manifest" href="manifest.json" />
-  <meta name="theme-color" content="#0f172a" />
-
-  <style>
-    :root{
-      --bg:#0b1020; --card:#111732; --muted:#94a3b8; --fg:#e2e8f0; --accent:#22c55e; --danger:#ef4444; --warn:#f59e0b;
-      --border:#1f2a44; --pill:#17203c;
-    }
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
-    .wrap{max-width:860px;margin:0 auto;padding:16px}
-    .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px}
-    h1{font-size:20px;margin:8px 0 12px}
-    .muted{color:var(--muted)}
-    .grid{display:grid;gap:10px}
-    .grid.cols-2{grid-template-columns:1fr 1fr}
-    .grid.cols-3{grid-template-columns:1fr 1fr 1fr}
-    @media(min-width:720px){ .grid.cols-3{grid-template-columns:1fr 1fr 1fr} }
-    input,select,button,textarea{
-      width:100%;padding:12px;border-radius:10px;border:1px solid var(--border);background:#0e1530;color:var(--fg);font-size:16px
-    }
-    button{background:#1f2a44;cursor:pointer}
-    button.primary{background:var(--accent);border-color:#1b8847;color:#052911;font-weight:700}
-    button.danger{background:#2b0f12;border-color:#512227;color:#ffb4b4}
-    .tabs{display:flex;gap:8px;margin-top:8px}
-    .tab-btn{flex:1;padding:10px;border-radius:10px;background:var(--pill);border:1px solid var(--border);text-align:center;cursor:pointer}
-    .tab-btn.active{background:#0e1530;border-color:#2f3c62}
-    .sum-cards{display:grid;gap:10px;grid-template-columns:1fr 1fr}
-    @media(min-width:560px){ .sum-cards{grid-template-columns:repeat(5,1fr)} }
-    .sum{padding:12px;border-radius:12px;background:#0e1530;border:1px solid var(--border)}
-    .sum .label{font-size:12px;color:var(--muted)}
-    .sum .value{font-size:18px;font-weight:800;margin-top:4px}
-    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-    .right{text-align:right}
-    .hidden{display:none!important}
-    table{width:100%;border-collapse:collapse;margin-top:8px}
-    th,td{padding:8px;border-bottom:1px solid var(--border);font-size:14px;vertical-align:middle}
-    .small{font-size:12px}
-    .pill{padding:6px 10px;background:var(--pill);border:1px solid var(--border);border-radius:999px;font-size:12px}
-    .note{font-size:12px;color:var(--muted)}
-    canvas{background:#0b122a;border:1px solid var(--border);border-radius:12px;padding:8px}
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Expense Tracker</title>
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#0f172a" />
+<style>
+  :root{--bg:#0b1020;--card:#111732;--muted:#94a3b8;--fg:#e2e8f0;--accent:#22c55e;--danger:#ef4444;--border:#1f2a44;--pill:#17203c}
+  *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+  .wrap{max-width:920px;margin:0 auto;padding:16px}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;margin-top:12px}
+  h1{font-size:20px;margin:6px 0 12px} .muted{color:var(--muted)} .right{text-align:right}
+  input,select,button{width:100%;padding:12px;border-radius:10px;border:1px solid var(--border);background:#0e1530;color:var(--fg);font-size:16px}
+  button{background:#1f2a44;cursor:pointer} .primary{background:var(--accent);border-color:#1b8847;color:#052911;font-weight:800}
+  .grid{display:grid;gap:10px} .cols-2{grid-template-columns:1fr 1fr} .cols-3{grid-template-columns:1fr 1fr 1fr}
+  .sum-grid{display:grid;gap:10px;grid-template-columns:repeat(5,1fr)}
+  .sum{padding:10px;border-radius:12px;background:#0e1530;border:1px solid var(--border);text-align:center}
+  .sum .label{font-size:12px;color:var(--muted)} .sum .value{font-size:18px;font-weight:800;margin-top:4px}
+  .edit-row input, .edit-row select{padding:6px;font-size:14px}
+  table{width:100%;border-collapse:collapse;margin-top:10px} th,td{padding:8px;border-bottom:1px solid var(--border);font-size:14px}
+  .small{font-size:12px} .hidden{display:none!important} .pill{padding:6px 10px;background:var(--pill);border:1px solid var(--border);border-radius:999px;font-size:12px}
+</style>
 </head>
 <body>
-  <div class="wrap">
+<div class="wrap">
 
-    <!-- Auth -->
-    <section id="auth" class="card">
-      <h1>Expense Tracker — Sign In</h1>
-      <p class="muted small">Email/Password login. Users are created from Firebase Console → Authentication.</p>
-      <div class="grid">
-        <input id="email" type="email" placeholder="Email" autocomplete="username">
-        <input id="password" type="password" placeholder="Password" autocomplete="current-password">
-        <button id="loginBtn" class="primary">Sign In</button>
-        <p id="authError" class="small" style="color:#fca5a5"></p>
-      </div>
-    </section>
+  <!-- Auth -->
+  <section id="auth" class="card">
+    <h1>Sign In</h1>
+    <div class="grid">
+      <input id="email" type="email" placeholder="Email">
+      <input id="password" type="password" placeholder="Password">
+      <button id="loginBtn" class="primary">Sign In</button>
+      <p id="authError" class="small" style="color:#fca5a5"></p>
+    </div>
+  </section>
 
-    <!-- App -->
-    <section id="app" class="card hidden">
-      <div class="row" style="justify-content:space-between;">
-        <h1>Expense Tracker</h1>
-        <div class="row">
-          <select id="monthSelect"></select>
-          <button id="logoutBtn">Logout</button>
+  <!-- App -->
+  <section id="app" class="card hidden">
+    <div class="grid cols-2" style="align-items:center">
+      <h1>Expense Tracker</h1>
+      <div class="right"><button id="logoutBtn">Logout</button></div>
+    </div>
+
+    <!-- Balances -->
+    <div class="card">
+      <div class="grid cols-2" style="align-items:center">
+        <h3 style="margin:0">Balances (CAD)</h3>
+        <div class="right">
+          <button id="editBalancesBtn">Edit balances</button>
+          <button id="saveBalancesBtn" class="primary hidden">Save</button>
+          <span id="balMsg" class="small muted"></span>
         </div>
       </div>
 
-      <!-- Summary -->
-      <div class="sum-cards">
-        <div class="sum"><div class="label">Total Income</div><div id="sumIncome" class="value">$0</div></div>
-        <div class="sum"><div class="label">Total Expenses</div><div id="sumExpenses" class="value">$0</div></div>
-        <div class="sum"><div class="label">Net</div><div id="sumNet" class="value">$0</div></div>
-        <div class="sum"><div class="label">PHC Remaining</div><div id="sumPHC" class="value">$0</div></div>
-        <div class="sum"><div class="label">UBC Remaining</div><div id="sumUBC" class="value">$0</div></div>
+      <div id="balancesView" class="sum-grid" style="margin-top:10px">
+        <div class="sum"><div class="label">Bank</div><div id="bankCur" class="value">$0.00</div></div>
+        <div class="sum"><div class="label">CIBC</div><div id="cibcCur" class="value">$0.00</div></div>
+        <div class="sum"><div class="label">Scotia</div><div id="scotiaCur" class="value">$0.00</div></div>
+        <div class="sum"><div class="label">PC Optimum</div><div id="pcoCur" class="value">$0.00</div></div>
+        <div class="sum"><div class="label">Capital One</div><div id="caponeCur" class="value">$0.00</div></div>
       </div>
 
-      <!-- Tabs -->
-      <div class="tabs" style="margin-top:12px">
-        <div class="tab-btn active" data-tab="add">Add</div>
-        <div class="tab-btn" data-tab="history">History</div>
+      <div id="balancesEdit" class="grid cols-3 hidden" style="margin-top:10px">
+        <div><label class="small muted">Bank starting</label><input id="bankStart" type="number" step="0.01"></div>
+        <div><label class="small muted">CIBC starting</label><input id="cibcStart" type="number" step="0.01"></div>
+        <div><label class="small muted">Scotia starting</label><input id="scotiaStart" type="number" step="0.01"></div>
+        <div><label class="small muted">PC Optimum starting</label><input id="pcoStart" type="number" step="0.01"></div>
+        <div><label class="small muted">Capital One starting</label><input id="caponeStart" type="number" step="0.01"></div>
       </div>
 
-      <!-- Add Tab -->
-      <div id="tab-add" class="grid" style="margin-top:12px">
-        <div class="row">
-          <span class="pill">Add:</span>
-          <label><input type="radio" name="addType" value="income" checked> Income</label>
-          <label><input type="radio" name="addType" value="expense"> Expense</label>
+      <div class="grid cols-2" style="margin-top:8px">
+        <div class="sum">
+          <div class="label">All Credit Cards Total</div>
+          <div id="cardsTotal" class="value">$0.00</div>
         </div>
+        <div class="sum">
+          <div class="label">Bank Total</div>
+          <div id="bankTotal" class="value">$0.00</div>
+        </div>
+      </div>
+      <p class="small muted" style="margin-top:6px">
+        * You can edit the <b>starting balances</b>. Current balances = starting + entries (Income adds to Bank; Expense debit subtracts from Bank; Expense credit adds to that card).
+      </p>
+    </div>
 
-        <!-- Income form -->
-        <div id="form-income" class="grid cols-2">
-          <input id="inc-date" type="date" />
-          <input id="inc-amount" type="number" step="0.01" placeholder="Amount" />
-          <select id="inc-currency">
+    <!-- Add + History (single screen) -->
+    <div class="grid cols-2">
+      <!-- Add -->
+      <div class="card">
+        <h3 style="margin-top:0">Add Entry</h3>
+        <div class="grid">
+          <div class="grid cols-2">
+            <label><input type="radio" name="type" value="income" checked> Income</label>
+            <label><input type="radio" name="type" value="expense"> Expense</label>
+          </div>
+
+          <input id="date" type="date">
+          <input id="amount" type="number" step="0.01" placeholder="Amount">
+          <select id="currency">
             <option value="CAD">CAD</option>
             <option value="USD">USD</option>
           </select>
-          <select id="inc-source">
-            <option value="PHC">PHC</option>
-            <option value="UBC">UBC</option>
-          </select>
-          <select id="inc-method">
+
+          <!-- Income-only: PHC/UBC -->
+          <div id="incomeRow" class="grid cols-2">
+            <select id="incSource">
+              <option value="PHC">PHC</option>
+              <option value="UBC">UBC</option>
+            </select>
+            <select id="incMethod">
+              <option value="card">card</option>
+              <option value="cash">cash</option>
+              <option value="other">other</option>
+            </select>
+          </div>
+
+          <!-- Expense-only: debit/credit & card -->
+          <div id="expenseRow" class="grid cols-2 hidden">
+            <select id="expPayType">
+              <option value="debit">debit</option>
+              <option value="credit">credit</option>
+            </select>
+            <select id="expCard" class="hidden">
+              <option value="CIBC">CIBC</option>
+              <option value="Scotia">Scotia</option>
+              <option value="PC Optimum">PC Optimum</option>
+              <option value="Capital One">Capital One</option>
+            </select>
+          </div>
+
+          <input id="category" placeholder="Category (e.g., Groceries, Gas, Rent)">
+          <select id="method">
             <option value="card">card</option>
             <option value="cash">cash</option>
             <option value="other">other</option>
           </select>
-          <input id="inc-notes" placeholder="Notes (optional)" />
-          <div class="grid"><button id="addIncomeBtn" class="primary">Add Income</button></div>
-          <p class="note">Fields: date, amount, currency, source (PHC/UBC), method, notes</p>
-        </div>
-
-        <!-- Expense form -->
-        <div id="form-expense" class="grid cols-2 hidden">
-          <input id="exp-date" type="date" />
-          <input id="exp-amount" type="number" step="0.01" placeholder="Amount" />
-          <select id="exp-currency">
-            <option value="CAD">CAD</option>
-            <option value="USD">USD</option>
-          </select>
-          <select id="exp-source">
-            <option value="PHC">PHC</option>
-            <option value="UBC">UBC</option>
-          </select>
-          <input id="exp-category" placeholder="Category (e.g., Groceries, Gas, Rent)" />
-          <select id="exp-method">
-            <option value="card">card</option>
-            <option value="cash">cash</option>
-            <option value="other">other</option>
-          </select>
-          <input id="exp-notes" placeholder="Notes (optional)" />
-          <div class="grid"><button id="addExpenseBtn" class="primary">Add Expense</button></div>
-          <p class="note">Fields: date, amount, currency, source (PHC/UBC), category, method, notes</p>
+          <input id="notes" placeholder="Notes (optional)">
+          <button id="addBtn" class="primary">Add</button>
+          <p class="small muted">Fields saved depend on type (income vs expense). Currency is stored; balances update for CAD amounts.</p>
         </div>
       </div>
 
-      <!-- History Tab -->
-      <div id="tab-history" class="hidden" style="margin-top:12px">
+      <!-- History -->
+      <div class="card">
+        <h3 style="margin-top:0">History</h3>
         <div class="grid cols-3">
-          <select id="filter-type">
+          <select id="filterType">
             <option value="all">All</option>
             <option value="income">Income</option>
             <option value="expense">Expense</option>
           </select>
-          <select id="filter-source">
-            <option value="all">All Sources</option>
-            <option value="PHC">PHC</option>
-            <option value="UBC">UBC</option>
+          <select id="filterPayType">
+            <option value="all">All Pay Types</option>
+            <option value="debit">debit</option>
+            <option value="credit">credit</option>
           </select>
-          <input id="filter-category" placeholder="Category (expenses only)" />
+          <input id="filterCategory" placeholder="Category (expenses)">
         </div>
 
-        <table id="table" class="small">
+        <table class="small">
           <thead>
-            <tr>
-              <th>Type</th><th>Date</th><th>Amt</th><th>Cur</th><th>Source</th><th>Category</th><th>Method</th><th>Notes</th><th class="right">Actions</th>
-            </tr>
+            <tr><th>Type</th><th>Date</th><th>Amt</th><th>Cur</th><th>Source/Card</th><th>PayType</th><th>Category</th><th>Notes</th><th class="right">Actions</th></tr>
           </thead>
           <tbody id="rows"></tbody>
         </table>
-
-        <div class="grid cols-2" style="margin-top:10px">
-          <div class="card">
-            <div class="row" style="justify-content:space-between">
-              <strong>Monthly Net Trend</strong> <span class="pill" id="chartMonthLabel"></span>
-            </div>
-            <canvas id="lineChart" width="400" height="220"></canvas>
-          </div>
-          <div class="card">
-            <div class="row" style="justify-content:space-between">
-              <strong>Category Breakdown (Expenses)</strong> <span class="pill" id="catMonthLabel"></span>
-            </div>
-            <canvas id="doughnutChart" width="400" height="220"></canvas>
-          </div>
-        </div>
       </div>
-    </section>
+    </div>
+  </section>
+</div>
 
-  </div> <!-- /wrap -->
+<!-- Firebase + App -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+  import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+  import { 
+    getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, getDoc,
+    serverTimestamp, query, where, getDocs, setDoc
+  } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
-  <!-- Chart.js CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyB5rvkKPst6V9-7HoqK1f27jQj6x7f8LiA",
+    authDomain: "trading-journal-da4eb.firebaseapp.com",
+    projectId: "trading-journal-da4eb",
+    storageBucket: "trading-journal-da4eb.firebasestorage.app",
+    messagingSenderId: "50906470929",
+    appId: "1:50906470929:web:b9ad784e9ae86c06d42fb0",
+    measurementId: "G-WR261BKTXL"
+  };
 
-  <!-- Firebase & App logic -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
-    import { 
-      getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut 
-    } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
-    import {
-      getFirestore, collection, addDoc, updateDoc, deleteDoc, doc,
-      serverTimestamp, query, where, getDocs
-    } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
 
-    // ✅ Your exact Firebase config
-    const firebaseConfig = {
-      apiKey: "AIzaSyB5rvkKPst6V9-7HoqK1f27jQj6x7f8LiA",
-      authDomain: "trading-journal-da4eb.firebaseapp.com",
-      projectId: "trading-journal-da4eb",
-      storageBucket: "trading-journal-da4eb.firebasestorage.app",
-      messagingSenderId: "50906470929",
-      appId: "1:50906470929:web:b9ad784e9ae86c06d42fb0",
-      measurementId: "G-WR261BKTXL"
+  const $ = (id)=>document.getElementById(id);
+
+  const authSec = $("auth"), appSec = $("app");
+  const errEl = $("authError");
+
+  const bankCur = $("bankCur"), cibcCur=$("cibcCur"), scotiaCur=$("scotiaCur"), pcoCur=$("pcoCur"), caponeCur=$("caponeCur");
+  const cardsTotal = $("cardsTotal"), bankTotal = $("bankTotal");
+  const editBtn = $("editBalancesBtn"), saveBtn = $("saveBalancesBtn"), balMsg=$("balMsg");
+  const balancesView = $("balancesView"), balancesEdit = $("balancesEdit");
+  const bankStart=$("bankStart"), cibcStart=$("cibcStart"), scotiaStart=$("scotiaStart"), pcoStart=$("pcoStart"), caponeStart=$("caponeStart");
+
+  const typeRadios = document.querySelectorAll("input[name='type']");
+  const incomeRow = $("incomeRow"), expenseRow = $("expenseRow");
+  const dateEl=$("date"), amountEl=$("amount"), currencyEl=$("currency"), incSource=$("incSource"), incMethod=$("incMethod");
+  const expPayType=$("expPayType"), expCard=$("expCard");
+  const categoryEl=$("category"), methodEl=$("method"), notesEl=$("notes");
+  const addBtn=$("addBtn");
+
+  const filterType=$("filterType"), filterPayType=$("filterPayType"), filterCategory=$("filterCategory");
+  const rowsEl=$("rows");
+
+  const fmt = (n)=>`$${(Number(n)||0).toFixed(2)}`;
+
+  const ACCOUNT_DOCS = [
+    { id:'bank', type:'bank', name:'Bank' },
+    { id:'cibc', type:'card', name:'CIBC' },
+    { id:'scotia', type:'card', name:'Scotia' },
+    { id:'pco', type:'card', name:'PC Optimum' },
+    { id:'capone', type:'card', name:'Capital One' }
+  ];
+
+  function today(){ return new Date().toISOString().slice(0,10); }
+
+  $("loginBtn").addEventListener("click", async ()=>{
+    errEl.textContent = "";
+    try{
+      await signInWithEmailAndPassword(auth, $("email").value.trim(), $("password").value);
+    }catch(e){ errEl.textContent = e.message || String(e); }
+  });
+  $("logoutBtn").addEventListener("click", ()=>signOut(auth));
+
+  // Toggle form fields
+  function updateFormVisibility(){
+    const t = document.querySelector("input[name='type']:checked").value;
+    incomeRow.classList.toggle("hidden", t!=='income');
+    expenseRow.classList.toggle("hidden", t!=='expense');
+  }
+  typeRadios.forEach(r=>r.addEventListener("change", updateFormVisibility));
+  expPayType.addEventListener("change", ()=>{
+    expCard.classList.toggle("hidden", expPayType.value!=='credit');
+  });
+
+  // Init defaults
+  dateEl.value = today();
+  updateFormVisibility();
+
+  onAuthStateChanged(auth, async (user)=>{
+    if(user){
+      authSec.classList.add("hidden");
+      appSec.classList.remove("hidden");
+      await ensureAccountDocs(user.uid);
+      await refreshAll();
+    }else{
+      appSec.classList.add("hidden");
+      authSec.classList.remove("hidden");
+    }
+  });
+
+  async function ensureAccountDocs(uid){
+    for(const a of ACCOUNT_DOCS){
+      const ref = doc(db, "accounts", `${uid}_${a.id}`);
+      const snap = await getDoc(ref);
+      if(!snap.exists()){
+        await setDoc(ref, {
+          ownerUid: uid, type:a.type, name:a.name,
+          startingBalance: 0, currency: 'CAD', timestamp: serverTimestamp()
+        });
+      }
+    }
+  }
+
+  // Add entry
+  addBtn.addEventListener("click", async ()=>{
+    const user = auth.currentUser; if(!user) return;
+    const common = {
+      ownerUid: user.uid,
+      date: dateEl.value,
+      amount: Number(amountEl.value||0),
+      currency: currencyEl.value,
+      method: methodEl.value,
+      notes: (notesEl.value||'').trim(),
+      timestamp: serverTimestamp()
+    };
+    if(!common.date || common.amount<=0){ alert("Enter a valid date and amount."); return; }
+
+    const t = document.querySelector("input[name='type']:checked").value;
+    if(t==='income'){
+      const data = { ...common, source: incSource.value, /* method already in common */ };
+      await addDoc(collection(db,"incomes"), data);
+    }else{
+      const data = { ...common, payType: expPayType.value, card: expPayType.value==='credit' ? expCard.value : null, category: (categoryEl.value||'').trim() };
+      if(!data.category){ alert("Enter category for expense."); return; }
+      await addDoc(collection(db,"expenses"), data);
+    }
+
+    amountEl.value = ""; notesEl.value = ""; categoryEl.value="";
+    await refreshAll();
+  });
+
+  async function loadAll(uid){
+    const [incSnap, expSnap] = await Promise.all([
+      getDocs(query(collection(db,"incomes"), where("ownerUid","==",uid))),
+      getDocs(query(collection(db,"expenses"), where("ownerUid","==",uid)))
+    ]);
+    const incomes = incSnap.docs.map(d=>({id:d.id, ...d.data()}));
+    const expenses = expSnap.docs.map(d=>({id:d.id, ...d.data()}));
+
+    const acctRefs = await Promise.all(ACCOUNT_DOCS.map(a=>getDoc(doc(db,"accounts", `${uid}_${a.id}`))));
+    const accounts = {};
+    ACCOUNT_DOCS.forEach((a,i)=>{
+      const dat = acctRefs[i].data();
+      accounts[a.id] = { ...a, startingBalance: dat?.startingBalance||0, currency: dat?.currency||'CAD' };
+    });
+    return { incomes, expenses, accounts };
+  }
+
+  function computeBalances(incomes, expenses, accounts){
+    // Start with startingBalance
+    const cur = {
+      bank: Number(accounts.bank.startingBalance)||0,
+      cibc: Number(accounts.cibc.startingBalance)||0,
+      scotia: Number(accounts.scotia.startingBalance)||0,
+      pco: Number(accounts.pco.startingBalance)||0,
+      capone: Number(accounts.capone.startingBalance)||0
     };
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
+    // Apply CAD entries only (you can change this if you want USD included)
+    incomes.filter(x=>x.currency==='CAD').forEach(x=>{
+      cur.bank += Number(x.amount)||0;           // income -> bank increases
+    });
 
-    // Elements
-    const $ = (id)=>document.getElementById(id);
-    const authSec = $("auth");
-    const appSec = $("app");
-    const authError = $("authError");
-    const monthSelect = $("monthSelect");
-    const tabs = document.querySelectorAll(".tab-btn");
-    const tabAdd = $("tab-add");
-    const tabHistory = $("tab-history");
-
-    // Forms
-    const addTypeInputs = document.querySelectorAll("input[name='addType']");
-    const formIncome = $("form-income");
-    const formExpense = $("form-expense");
-
-    // History/filters
-    const filterType = $("filter-type");
-    const filterSource = $("filter-source");
-    const filterCategory = $("filter-category");
-    const rows = $("rows");
-
-    // Summaries
-    const sumIncome = $("sumIncome");
-    const sumExpenses = $("sumExpenses");
-    const sumNet = $("sumNet");
-    const sumPHC = $("sumPHC");
-    const sumUBC = $("sumUBC");
-
-    // Charts
-    const lineCtx = $("lineChart");
-    const doughnutCtx = $("doughnutChart");
-    let lineChart, doughnutChart;
-
-    // Utils
-    const todayStr = new Date().toISOString().slice(0,10);
-    const ym = (d)=> d.slice(0,7); // YYYY-MM
-
-    function fmt(n, cur="CAD"){ 
-      try { return (new Intl.NumberFormat('en-CA', { style:'currency', currency: cur })).format(n); }
-      catch { return `$${n.toFixed(2)}`; }
-    }
-
-    // Month selector: current + previous 11 months
-    function buildMonthOptions(){
-      monthSelect.innerHTML = "";
-      const now = new Date();
-      for(let i=0;i<12;i++){
-        const dt = new Date(now.getFullYear(), now.getMonth()-i, 1);
-        const y = dt.getFullYear();
-        const m = String(dt.getMonth()+1).padStart(2,'0');
-        const val = `${y}-${m}`;
-        const opt = document.createElement("option");
-        opt.value = val;
-        opt.textContent = dt.toLocaleString('default',{month:'long', year:'numeric'});
-        monthSelect.appendChild(opt);
-      }
-    }
-
-    // Auth handlers
-    $("loginBtn").addEventListener("click", async ()=>{
-      authError.textContent = "";
-      const email = $("email").value.trim();
-      const password = $("password").value;
-      try{
-        await signInWithEmailAndPassword(auth, email, password);
-      }catch(e){
-        authError.textContent = e.message || String(e);
+    expenses.filter(x=>x.currency==='CAD').forEach(x=>{
+      if(x.payType==='debit'){
+        cur.bank -= Number(x.amount)||0;         // debit expense -> bank decreases
+      }else if(x.payType==='credit'){
+        const map = { 'CIBC':'cibc', 'Scotia':'scotia', 'PC Optimum':'pco', 'Capital One':'capone' };
+        const key = map[x.card];
+        if(key) cur[key] += Number(x.amount)||0; // credit expense -> card increases
       }
     });
-    $("logoutBtn").addEventListener("click", ()=>signOut(auth));
 
-    onAuthStateChanged(auth, async (user)=>{
-      if(user){
-        authSec.classList.add("hidden");
-        appSec.classList.remove("hidden");
-        buildMonthOptions();
+    return cur;
+  }
+
+  async function refreshAll(){
+    const uid = auth.currentUser.uid;
+    const { incomes, expenses, accounts } = await loadAll(uid);
+
+    // balances: view & edit boxes
+    bankStart.value = accounts.bank.startingBalance;
+    cibcStart.value = accounts.cibc.startingBalance;
+    scotiaStart.value = accounts.scotia.startingBalance;
+    pcoStart.value = accounts.pco.startingBalance;
+    caponeStart.value = accounts.capone.startingBalance;
+
+    const cur = computeBalances(incomes, expenses, accounts);
+    bankCur.textContent = fmt(cur.bank);
+    cibcCur.textContent = fmt(cur.cibc);
+    scotiaCur.textContent = fmt(cur.scotia);
+    pcoCur.textContent = fmt(cur.pco);
+    caponeCur.textContent = fmt(cur.capone);
+
+    const cardsSum = cur.cibc + cur.scotia + cur.pco + cur.capone;
+    cardsTotal.textContent = fmt(cardsSum);
+    bankTotal.textContent = fmt(cur.bank);
+
+    rebuildTable(incomes, expenses);
+  }
+
+  // Edit balances toggle & save
+  editBtn.addEventListener("click", ()=>{
+    balancesView.classList.add("hidden");
+    balancesEdit.classList.remove("hidden");
+    saveBtn.classList.remove("hidden");
+    editBtn.classList.add("hidden");
+    balMsg.textContent = "";
+  });
+  saveBtn.addEventListener("click", async ()=>{
+    const uid = auth.currentUser.uid;
+    const payloads = [
+      { id:'bank', val:Number(bankStart.value||0) },
+      { id:'cibc', val:Number(cibcStart.value||0) },
+      { id:'scotia', val:Number(scotiaStart.value||0) },
+      { id:'pco', val:Number(pcoStart.value||0) },
+      { id:'capone', val:Number(caponeStart.value||0) },
+    ];
+    for(const p of payloads){
+      await updateDoc(doc(db,"accounts", `${uid}_${p.id}`), { startingBalance: p.val });
+    }
+    balancesView.classList.remove("hidden");
+    balancesEdit.classList.add("hidden");
+    saveBtn.classList.add("hidden");
+    editBtn.classList.remove("hidden");
+    balMsg.textContent = "Saved.";
+    await refreshAll();
+  });
+
+  function rebuildTable(incomes, expenses){
+    const tFilter = filterType.value;
+    const pFilter = filterPayType.value;
+    const cFilter = (filterCategory.value||'').toLowerCase();
+
+    const rows = [
+      ...incomes.map(x=>({type:'income', ...x})),
+      ...expenses.map(x=>({type:'expense', ...x}))
+    ].sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+
+    rowsEl.innerHTML = "";
+    rows.forEach(item=>{
+      if(tFilter!=='all' && item.type!==tFilter) return;
+      if(item.type==='expense' && pFilter!=='all' && item.payType!==pFilter) return;
+      if(item.type==='expense' && cFilter && !(item.category||'').toLowerCase().includes(cFilter)) return;
+
+      const tr = document.createElement("tr");
+      tr.dataset.id = item.id; tr.dataset.type = item.type;
+      const srcOrCard = item.type==='income' ? (item.source||'') : (item.card||'');
+      const payType = item.type==='expense' ? (item.payType||'') : '';
+
+      tr.innerHTML = `
+        <td>${item.type}</td>
+        <td><input class="edit date" type="date" value="${item.date||''}"></td>
+        <td><input class="edit amount" type="number" step="0.01" value="${item.amount||0}"></td>
+        <td>
+          <select class="edit currency">
+            <option ${item.currency==='CAD'?'selected':''}>CAD</option>
+            <option ${item.currency==='USD'?'selected':''}>USD</option>
+          </select>
+        </td>
+        <td>${ item.type==='income'
+              ? `<select class="edit source"><option ${srcOrCard==='PHC'?'selected':''}>PHC</option><option ${srcOrCard==='UBC'?'selected':''}>UBC</option></select>`
+              : (item.payType==='credit'
+                    ? `<select class="edit card"><option ${srcOrCard==='CIBC'?'selected':''}>CIBC</option><option ${srcOrCard==='Scotia'?'selected':''}>Scotia</option><option ${srcOrCard==='PC Optimum'?'selected':''}>PC Optimum</option><option ${srcOrCard==='Capital One'?'selected':''}>Capital One</option></select>`
+                    : `<span class="pill">—</span>` ) }
+        </td>
+        <td>${ item.type==='expense'
+              ? `<select class="edit payType"><option ${payType==='debit'?'selected':''}>debit</option><option ${payType==='credit'?'selected':''}>credit</option></select>`
+              : `<span class="pill">—</span>`}
+        </td>
+        <td>${ item.type==='expense' ? `<input class="edit category" value="${item.category||''}">` : `<span class="pill">—</span>`}</td>
+        <td><input class="edit notes" value="${item.notes||''}"></td>
+        <td class="right">
+          <button class="saveBtn">Save</button>
+          <button class="delBtn">Delete</button>
+        </td>
+      `;
+
+      // Save
+      tr.querySelector(".saveBtn").addEventListener("click", async ()=>{
+        const payload = {
+          date: tr.querySelector(".edit.date").value,
+          amount: Number(tr.querySelector(".edit.amount").value||0),
+          currency: tr.querySelector(".edit.currency").value,
+          notes: tr.querySelector(".edit.notes").value
+        };
+        if(item.type==='income'){
+          payload.source = tr.querySelector(".edit.source").value;
+        }else{
+          payload.payType = tr.querySelector(".edit.payType").value;
+          payload.category = tr.querySelector(".edit.category").value;
+          payload.card = (payload.payType==='credit') ? (tr.querySelector(".edit.card")?.value || null) : null;
+        }
+        await updateDoc(doc(db, item.type==='income'?'incomes':'expenses', item.id), payload);
         await refreshAll();
-      }else{
-        appSec.classList.add("hidden");
-        authSec.classList.remove("hidden");
-      }
+        alert("Updated.");
+      });
+
+      // Delete
+      tr.querySelector(".delBtn").addEventListener("click", async ()=>{
+        if(!confirm("Delete this entry?")) return;
+        await deleteDoc(doc(db, item.type==='income'?'incomes':'expenses', item.id));
+        await refreshAll();
+      });
+
+      rowsEl.appendChild(tr);
     });
+  }
+</script>
 
-    // Tab switching
-    tabs.forEach(btn=>{
-      btn.addEventListener("click", ()=>{
-        tabs.forEach(b=>b.classList.remove("active"));
-        btn.classList.add("active");
-        const tab = btn.dataset.tab;
-        tabAdd.classList.toggle("hidden", tab!=="add");
-        tabHistory.classList.toggle("hidden", tab!=="history");
-      });
-    });
-
-    // AddType toggle
-    addTypeInputs.forEach(r=>{
-      r.addEventListener("change", ()=>{
-        const val = document.querySelector("input[name='addType']:checked").value;
-        formIncome.classList.toggle("hidden", val!=="income");
-        formExpense.classList.toggle("hidden", val!=="expense");
-      });
-    });
-
-    // Defaults: set date fields to today
-    ["inc-date","exp-date"].forEach(id=>$(id).value = todayStr);
-
-    // Add Income
-    $("addIncomeBtn").addEventListener("click", async ()=>{
-      const user = auth.currentUser; if(!user) return;
-      const data = {
-        ownerUid: user.uid,
-        date: $("inc-date").value,
-        amount: Number($("inc-amount").value || 0),
-        currency: $("inc-currency").value,
-        source: $("inc-source").value,       // PHC/UBC
-        method: $("inc-method").value,       // card/cash/other
-        notes: $("inc-notes").value.trim(),
-        timestamp: serverTimestamp()
-      };
-      if(!data.date || data.amount<=0){ alert("Enter valid date and amount."); return; }
-      await addDoc(collection(db, "incomes"), data);
-      // reset a little
-      $("inc-amount").value = "";
-      $("inc-notes").value = "";
-      await refreshAll();
-      alert("Income added.");
-    });
-
-    // Add Expense
-    $("addExpenseBtn").addEventListener("click", async ()=>{
-      const user = auth.currentUser; if(!user) return;
-      const data = {
-        ownerUid: user.uid,
-        date: $("exp-date").value,
-        amount: Number($("exp-amount").value || 0),
-        currency: $("exp-currency").value,
-        source: $("exp-source").value,       // PHC/UBC
-        category: $("exp-category").value.trim(),
-        method: $("exp-method").value,
-        notes: $("exp-notes").value.trim(),
-        timestamp: serverTimestamp()
-      };
-      if(!data.date || data.amount<=0){ alert("Enter valid date and amount."); return; }
-      if(!data.category){ alert("Enter category."); return; }
-      await addDoc(collection(db, "expenses"), data);
-      $("exp-amount").value = "";
-      $("exp-category").value = "";
-      $("exp-notes").value = "";
-      await refreshAll();
-      alert("Expense added.");
-    });
-
-    // Load all owner docs; filter by month client-side to avoid index requirements
-    async function loadAllDocs(){
-      const user = auth.currentUser; if(!user) return { incomes:[], expenses:[] };
-      const [incSnap, expSnap] = await Promise.all([
-        getDocs(query(collection(db,"incomes"), where("ownerUid","==",user.uid))),
-        getDocs(query(collection(db,"expenses"), where("ownerUid","==",user.uid)))
-      ]);
-      const incomes = incSnap.docs.map(d=>({id:d.id, ...d.data()}));
-      const expenses = expSnap.docs.map(d=>({id:d.id, ...d.data()}));
-      return { incomes, expenses };
-    }
-
-    function filterByMonth(items, month){ // month = 'YYYY-MM'
-      return items.filter(it => typeof it.date === 'string' && ym(it.date) === month);
-    }
-
-    function summarize(monthIncomes, monthExpenses){
-      // We’ll compute totals per currency first
-      const sum = (arr)=>arr.reduce((a,x)=>a+(Number(x.amount)||0),0);
-
-      const incCAD = sum(monthIncomes.filter(x=>x.currency==='CAD'));
-      const incUSD = sum(monthIncomes.filter(x=>x.currency==='USD'));
-      const expCAD = sum(monthExpenses.filter(x=>x.currency==='CAD'));
-      const expUSD = sum(monthExpenses.filter(x=>x.currency==='USD'));
-
-      // Display: keep currencies separate (no conversion)
-      sumIncome.textContent = `CAD ${incCAD.toFixed(2)} | USD ${incUSD.toFixed(2)}`;
-      sumExpenses.textContent = `CAD ${expCAD.toFixed(2)} | USD ${expUSD.toFixed(2)}`;
-      sumNet.textContent = `CAD ${(incCAD-expCAD).toFixed(2)} | USD ${(incUSD-expUSD).toFixed(2)}`;
-
-      // PHC/UBC remaining for the month (earned - spent), per currency, but show combined text
-      const phcEarn = sum(monthIncomes.filter(x=>x.source==='PHC'));
-      const phcSpend = sum(monthExpenses.filter(x=>x.source==='PHC'));
-      const ubcEarn = sum(monthIncomes.filter(x=>x.source==='UBC'));
-      const ubcSpend = sum(monthExpenses.filter(x=>x.source==='UBC'));
-      sumPHC.textContent = (phcEarn - phcSpend).toFixed(2);
-      sumUBC.textContent = (ubcEarn - ubcSpend).toFixed(2);
-    }
-
-    function rebuildTable(monthIncomes, monthExpenses){
-      const typeFilter = filterType.value;
-      const sourceFilter = filterSource.value;
-      const catFilter = filterCategory.value.trim().toLowerCase();
-
-      const rowsData = [
-        ...monthIncomes.map(x=>({type:'income', ...x})),
-        ...monthExpenses.map(x=>({type:'expense', ...x}))
-      ].sort((a,b)=> (a.date||'').localeCompare(b.date||''));
-
-      rows.innerHTML = "";
-
-      rowsData.forEach(item=>{
-        if(typeFilter!=='all' && item.type!==typeFilter) return;
-        if(sourceFilter!=='all' && item.source!==sourceFilter) return;
-        if(item.type==='expense' && catFilter && !(item.category||'').toLowerCase().includes(catFilter)) return;
-
-        const tr = document.createElement("tr");
-        tr.dataset.id = item.id; tr.dataset.type = item.type;
-
-        const cat = item.type==='expense' ? (item.category||'') : '';
-        tr.innerHTML = `
-          <td>${item.type}</td>
-          <td><input class="edit date" type="date" value="${item.date||''}"></td>
-          <td><input class="edit amount" type="number" step="0.01" value="${item.amount||0}"></td>
-          <td>
-            <select class="edit currency">
-              <option ${item.currency==='CAD'?'selected':''}>CAD</option>
-              <option ${item.currency==='USD'?'selected':''}>USD</option>
-            </select>
-          </td>
-          <td>
-            <select class="edit source">
-              <option ${item.source==='PHC'?'selected':''}>PHC</option>
-              <option ${item.source==='UBC'?'selected':''}>UBC</option>
-            </select>
-          </td>
-          <td>${ item.type==='expense' ? `<input class="edit category" value="${cat}">` : `<span class="small pill">—</span>`}</td>
-          <td>
-            <select class="edit method">
-              <option ${item.method==='card'?'selected':''}>card</option>
-              <option ${item.method==='cash'?'selected':''}>cash</option>
-              <option ${item.method==='other'?'selected':''}>other</option>
-            </select>
-          </td>
-          <td><input class="edit notes" value="${item.notes||''}"></td>
-          <td class="right">
-            <button class="saveBtn">Save</button>
-            <button class="danger deleteBtn">Delete</button>
-          </td>
-        `;
-
-        // Save
-        tr.querySelector(".saveBtn").addEventListener("click", async ()=>{
-          const id = tr.dataset.id;
-          const type = tr.dataset.type;
-          const payload = {
-            date: tr.querySelector(".edit.date").value,
-            amount: Number(tr.querySelector(".edit.amount").value||0),
-            currency: tr.querySelector(".edit.currency").value,
-            source: tr.querySelector(".edit.source").value,
-            method: tr.querySelector(".edit.method").value,
-            notes: tr.querySelector(".edit.notes").value,
-          };
-          if(type==='expense'){
-            payload.category = tr.querySelector(".edit.category").value;
-          }
-          const ref = doc(db, type==='income' ? "incomes":"expenses", id);
-          await updateDoc(ref, payload);
-          alert("Updated.");
-          await refreshAll();
-        });
-
-        // Delete
-        tr.querySelector(".deleteBtn").addEventListener("click", async ()=>{
-          if(!confirm("Delete this entry?")) return;
-          const id = tr.dataset.id;
-          const type = tr.dataset.type;
-          await deleteDoc(doc(db, type==='income' ? "incomes":"expenses", id));
-          await refreshAll();
-        });
-
-        rows.appendChild(tr);
-      });
-    }
-
-    function rebuildCharts(month, monthIncomes, monthExpenses){
-      $("chartMonthLabel").textContent = month;
-      $("catMonthLabel").textContent = month;
-
-      // Line chart: cumulative net per day within month (income - expenses, all currencies combined numerically)
-      const daysInMonth = new Date(Number(month.slice(0,4)), Number(month.slice(5,7)), 0).getDate();
-      const labels = Array.from({length:daysInMonth}, (_,i)=> String(i+1).padStart(2,'0'));
-      const byDay = {};
-      labels.forEach(d=>byDay[d]=0);
-
-      monthIncomes.forEach(x=>{
-        const d = x.date.slice(8,10);
-        byDay[d] += Number(x.amount)||0;
-      });
-      monthExpenses.forEach(x=>{
-        const d = x.date.slice(8,10);
-        byDay[d] -= Number(x.amount)||0;
-      });
-
-      let cumulative = 0;
-      const data = labels.map(d=>{
-        cumulative += byDay[d];
-        return cumulative;
-      });
-
-      if(lineChart) lineChart.destroy();
-      lineChart = new Chart(lineCtx, {
-        type:'line',
-        data:{ labels, datasets:[{ label:'Cumulative Net', data, tension:0.2 }] },
-        options:{ responsive:true, plugins:{ legend:{ display:false } } }
-      });
-
-      // Doughnut: expenses by category
-      const catMap = {};
-      monthExpenses.forEach(x=>{
-        const c = (x.category||'Other').trim() || 'Other';
-        catMap[c] = (catMap[c]||0) + (Number(x.amount)||0);
-      });
-      const catLabels = Object.keys(catMap);
-      const catData = Object.values(catMap);
-
-      if(doughnutChart) doughnutChart.destroy();
-      doughnutChart = new Chart(doughnutCtx, {
-        type:'doughnut',
-        data:{ labels:catLabels, datasets:[{ data:catData }] },
-        options:{ responsive:true, plugins:{ legend:{ position:'bottom' } } }
-      });
-    }
-
-    async function refreshAll(){
-      const { incomes, expenses } = await loadAllDocs();
-      const month = monthSelect.value || ym(todayStr);
-      const mIncomes = filterByMonth(incomes, month);
-      const mExpenses = filterByMonth(expenses, month);
-
-      summarize(mIncomes, mExpenses);
-      rebuildTable(mIncomes, mExpenses);
-      rebuildCharts(month, mIncomes, mExpenses);
-    }
-
-    monthSelect.addEventListener("change", refreshAll);
-    filterType.addEventListener("change", refreshAll);
-    filterSource.addEventListener("change", refreshAll);
-    filterCategory.addEventListener("input", refreshAll);
-  </script>
-
-  <!-- Service Worker registration -->
-  <script>
-    if ("serviceWorker" in navigator) {
-      window.addEventListener("load", () => {
-        navigator.serviceWorker.register("./service-worker.js").catch(console.error);
-      });
-    }
-  </script>
+<!-- SW registration -->
+<script>
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', ()=>navigator.serviceWorker.register('./service-worker.js').catch(console.error));
+  }
+</script>
 </body>
 </html>
