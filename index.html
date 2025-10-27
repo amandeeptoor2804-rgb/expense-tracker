@@ -1,173 +1,3 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Expense Tracker</title>
-<link rel="manifest" href="manifest.json" />
-<meta name="theme-color" content="#0f172a" />
-
-<style>
-:root{
-  --bg:#0b1020;--card:#111732;--muted:#94a3b8;--fg:#e2e8f0;
-  --accent:#22c55e;--danger:#ef4444;--border:#1f2a44;--pill:#17203c;
-}
-*{box-sizing:border-box}
-body{margin:0;padding:0;background:var(--bg);color:var(--fg);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial}
-.container{max-width:980px;margin:0 auto;padding:16px}
-.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:16px;margin-top:12px}
-h1,h3{margin:6px 0;color:var(--fg)}
-button,input,select{width:100%;padding:14px;border-radius:10px;border:1px solid var(--border);background:#0e1530;color:var(--fg);font-size:16px}
-button{cursor:pointer;font-weight:700}
-.primary{background:var(--accent);color:#052911;border-color:#1a7f46}
-.right{text-align:right}
-.grid{display:grid;gap:12px}
-.cols-2{grid-template-columns:1fr 1fr}
-
-.sum-grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(130px,1fr))}
-.sum{background:#0e1530;border:1px solid var(--border);padding:12px;border-radius:12px;text-align:center}
-.sum .label{font-size:13px;color:var(--muted)}
-.sum .value{font-size:20px;font-weight:800;margin-top:4px}
-
-.history-wrap{margin-top:10px}
-table{width:100%;border-collapse:collapse;margin-top:8px;table-layout:fixed}
-th,td{padding:10px;border-bottom:1px solid var(--border);font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-
-td input.edit, td select.edit{
-  width:100%;min-width:90px;padding:8px;font-size:15px;
-}
-
-@media(max-width:800px){
-  table{display:block;overflow-x:auto;white-space:nowrap}
-  td,th{min-width:120px}
-}
-
-.sticky-head{
-  position:sticky;top:0;background:var(--card);z-index:2;
-}
-
-.pill{background:var(--pill);border:1px solid var(--border);padding:4px 8px;border-radius:20px;font-size:12px}
-.small{font-size:13px;color:var(--muted)}
-
-.hidden{display:none!important}
-</style>
-</head>
-
-<body>
-<div class="container">
-
-  <!-- Login -->
-  <section id="loginCard" class="card">
-    <h1>Sign In</h1>
-    <input id="email" type="email" placeholder="Email" autocomplete="username" />
-    <input id="password" type="password" placeholder="Password" autocomplete="current-password" />
-    <button id="loginBtn" class="primary">Login</button>
-    <p id="err" class="small" style="color:#fca5a5"></p>
-  </section>
-
-  <!-- App -->
-  <section id="appCard" class="hidden">
-
-    <div class="card grid cols-2" style="align-items:center">
-      <h1>Expense Tracker</h1>
-      <div class="right"><button id="logoutBtn">Logout</button></div>
-    </div>
-
-    <!-- Balances -->
-    <div class="card">
-      <div class="grid cols-2" style="align-items:center">
-        <h3>Balances (CAD)</h3>
-        <div class="right">
-          <button id="editBalancesBtn">Edit</button>
-          <button id="saveBalancesBtn" class="primary hidden">Save</button>
-        </div>
-      </div>
-
-      <div id="balanceView" class="sum-grid" style="margin-top:10px">
-        <div class="sum"><div class="label">Bank</div><div id="bankCur" class="value">$0.00</div></div>
-        <div class="sum"><div class="label">CIBC</div><div id="cibcCur" class="value">$0.00</div></div>
-        <div class="sum"><div class="label">Scotia</div><div id="scotiaCur" class="value">$0.00</div></div>
-        <div class="sum"><div class="label">PC Optimum</div><div id="pcoCur" class="value">$0.00</div></div>
-        <div class="sum"><div class="label">Capital One</div><div id="caponeCur" class="value">$0.00</div></div>
-      </div>
-
-      <div id="balanceEdit" class="hidden grid cols-2" style="margin-top:10px">
-        <input id="bankStart" type="number" step="0.01" placeholder="Bank start">
-        <input id="cibcStart" type="number" step="0.01" placeholder="CIBC start">
-        <input id="scotiaStart" type="number" step="0.01" placeholder="Scotia start">
-        <input id="pcoStart" type="number" step="0.01" placeholder="PCO start">
-        <input id="caponeStart" type="number" step="0.01" placeholder="Cap One start">
-      </div>
-
-      <p class="small" style="margin-top:8px">💡 Edit only starting balances. Entries auto-update totals.</p>
-    </div>
-
-    <!-- Add Entry -->
-    <div class="card">
-      <h3>Add Entry</h3>
-
-      <div class="grid cols-2">
-        <label><input type="radio" name="entType" value="income" checked> Income</label>
-        <label><input type="radio" name="entType" value="expense"> Expense</label>
-      </div>
-
-      <label><input type="radio" name="entType" value="transfer"> Deposit to Credit Card</label>
-
-      <input id="date" type="date">
-      <input id="amount" type="number" step="0.01" placeholder="Amount">
-
-      <select id="currency">
-        <option value="CAD">CAD</option>
-      </select>
-
-      <!-- Income -->
-      <div id="incomeRow">
-        <select id="incSource">
-          <option value="PHC">PHC</option>
-          <option value="UBC">UBC</option>
-        </select>
-      </div>
-
-      <!-- Expense + Transfer -->
-      <div id="expenseRow" class="hidden">
-        <input id="category" placeholder="Category (e.g. Gas)">
-        <select id="expCardSelect" class="hidden">
-          <option value="CIBC">CIBC</option>
-          <option value="Scotia">Scotia</option>
-          <option value="PC Optimum">PC Optimum</option>
-          <option value="Capital One">Capital One</option>
-        </select>
-      </div>
-
-      <button id="addBtn" class="primary">Add</button>
-    </div>
-
-    <!-- Entries (immediately underneath) -->
-    <div class="card">
-      <h3>Entries</h3>
-      <div class="grid cols-2">
-        <select id="filterType">
-          <option value="all">All</option>
-          <option value="income">Income</option>
-          <option value="expense">Expense</option>
-          <option value="transfer">Transfer</option>
-        </select>
-        <input id="filterCat" placeholder="Category">
-      </div>
-      
-      <div class="history-wrap">
-        <table>
-          <thead class="sticky-head">
-            <tr><th>Type</th><th>Date</th><th>Amt</th><th>Card</th><th>Category</th><th>Actions</th></tr>
-          </thead>
-          <tbody id="rows"></tbody>
-        </table>
-      </div>
-    </div>
-
-  </section>
-</div>
-
 <script type="module">
 /* ---------------- Firebase Setup ---------------- */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
@@ -180,7 +10,7 @@ import {
   query, where 
 } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
-// ✅ Your Firebase config:
+// --- Firebase config (yours) ---
 const firebaseConfig = {
   apiKey: "AIzaSyB5rvkKPst6V9-7HoqK1f27jQj6x7f8LiA",
   authDomain: "trading-journal-da4eb.firebaseapp.com",
@@ -197,33 +27,39 @@ const db = getFirestore(app);
 
 const $ = (id)=>document.getElementById(id);
 
+// --- DOM refs ---
 const loginCard = $("loginCard");
 const appCard = $("appCard");
 const err = $("err");
 
 const bankCur=$("bankCur"), cibcCur=$("cibcCur"), scotiaCur=$("scotiaCur"),
-pcoCur=$("pcoCur"), caponeCur=$("caponeCur");
+      pcoCur=$("pcoCur"), caponeCur=$("caponeCur");
 
 const bankStart=$("bankStart"), cibcStart=$("cibcStart"), scotiaStart=$("scotiaStart"),
-pcoStart=$("pcoStart"), caponeStart=$("caponeStart");
+      pcoStart=$("pcoStart"), caponeStart=$("caponeStart");
 
 const filterType=$("filterType");
 const filterCat=$("filterCat");
 const rowsEl=$("rows");
+
+const typeRadios = Array.from(document.querySelectorAll("input[name='entType']"));
+const incomeRow = document.getElementById("incomeRow");
+const expenseRow = document.getElementById("expenseRow");
+const categoryInput = document.getElementById("category");
+const expCardSelect = document.getElementById("expCardSelect");
 
 function fmt(n){ return `$${(Number(n)||0).toFixed(2)}`; }
 function today(){ return new Date().toISOString().slice(0,10); }
 
 $("date").value = today();
 
-/* ---------------- AUTH ---------------- */
+/* ---------------- Auth ---------------- */
 $("loginBtn").addEventListener("click", async ()=>{
   err.textContent="";
   try{
     await signInWithEmailAndPassword(auth,$("email").value.trim(),$("password").value);
   }catch(e){ err.textContent=e.message; }
 });
-
 $("logoutBtn").addEventListener("click", ()=>signOut(auth));
 
 onAuthStateChanged(auth, async (user)=>{
@@ -231,6 +67,7 @@ onAuthStateChanged(auth, async (user)=>{
     loginCard.classList.add("hidden");
     appCard.classList.remove("hidden");
     await ensureAccountSetup(user.uid);
+    updateFormVisibility();
     await refreshAll();
   } else {
     loginCard.classList.remove("hidden");
@@ -238,7 +75,7 @@ onAuthStateChanged(auth, async (user)=>{
   }
 });
 
-/* ---------------- Account Setup ---------------- */
+/* ---------------- One-time account docs ---------------- */
 async function ensureAccountSetup(uid){
   const ACC = [
     {id:"bank", name:"Bank", type:"bank"},
@@ -260,6 +97,34 @@ async function ensureAccountSetup(uid){
     }
   }
 }
+
+/* ---------------- Show/Hide fields per type ---------------- */
+function updateFormVisibility() {
+  const t = document.querySelector("input[name='entType']:checked").value;
+
+  // Income: PHC/UBC only
+  if (t === "income") {
+    incomeRow.classList.remove("hidden");
+    expenseRow.classList.add("hidden");
+    categoryInput.classList.add("hidden");
+    expCardSelect.classList.add("hidden");
+  }
+  // Expense (debit): Category only
+  if (t === "expense") {
+    incomeRow.classList.add("hidden");
+    expenseRow.classList.remove("hidden");
+    categoryInput.classList.remove("hidden");
+    expCardSelect.classList.add("hidden");
+  }
+  // Transfer to card: Card picker only
+  if (t === "transfer") {
+    incomeRow.classList.add("hidden");
+    expenseRow.classList.remove("hidden");
+    categoryInput.classList.add("hidden");
+    expCardSelect.classList.remove("hidden");
+  }
+}
+typeRadios.forEach(r => r.addEventListener("change", updateFormVisibility));
 
 /* ---------------- Add Entry ---------------- */
 $("addBtn").addEventListener("click", async ()=>{
@@ -283,10 +148,10 @@ $("addBtn").addEventListener("click", async ()=>{
   }
   else if(t === "expense"){
     await addDoc(collection(db,"expenses"),{
-      ...base, payType:"debit", category:$("category").value||"-"
+      ...base, payType:"debit", category:($("category").value||"-")
     });
   }
-  else if(t === "transfer"){
+  else if(t === "transfer"){ // Deposit to Credit Card
     await addDoc(collection(db,"expenses"),{
       ...base,
       payType:"credit",
@@ -300,7 +165,7 @@ $("addBtn").addEventListener("click", async ()=>{
   await refreshAll();
 });
 
-/* ---------------- Load Data + Compute Balances ---------------- */
+/* ---------------- Load + compute ---------------- */
 async function refreshAll(){
   const uid = auth.currentUser.uid;
   const [incSnap,expSnap] = await Promise.all([
@@ -325,7 +190,11 @@ async function loadAccounts(uid,incomes,expenses){
 
   let cur={...accounts};
 
+  // Income -> bank up
   incomes.forEach(i => cur.bank += i.amount);
+
+  // Expense (debit) -> bank down
+  // Transfer (credit) -> card up
   expenses.forEach(e => {
     if(e.payType==="debit") cur.bank -= e.amount;
     if(e.payType==="credit"){
@@ -340,6 +209,7 @@ async function loadAccounts(uid,incomes,expenses){
   pcoCur.textContent=fmt(cur.pco);
   caponeCur.textContent=fmt(cur.capone);
 
+  // Fill editors with starting balances
   bankStart.value=accounts.bank;
   cibcStart.value=accounts.cibc;
   scotiaStart.value=accounts.scotia;
@@ -347,7 +217,7 @@ async function loadAccounts(uid,incomes,expenses){
   caponeStart.value=accounts.capone;
 }
 
-/* ---------------- Edit Balances ---------------- */
+/* ---------------- Edit balances ---------------- */
 $("editBalancesBtn").addEventListener("click",()=>{
   $("balanceView").classList.add("hidden");
   $("balanceEdit").classList.remove("hidden");
@@ -374,7 +244,7 @@ $("saveBalancesBtn").addEventListener("click",async()=>{
   await refreshAll();
 });
 
-/* ---------------- Build Table ---------------- */
+/* ---------------- Rows (entries list) ---------------- */
 function rebuildRows(incomes,expenses){
   const filter=filterType.value;
   const cat=(filterCat.value||"").toLowerCase();
@@ -401,7 +271,7 @@ function rebuildRows(incomes,expenses){
         <button class="delBtn">Delete</button>
       </td>`;
 
-    // Save
+    // Save row
     tr.querySelector(".saveBtn").addEventListener("click", async()=>{
       const payload={
         date:tr.querySelector(".date").value,
@@ -413,7 +283,7 @@ function rebuildRows(incomes,expenses){
       await refreshAll();
     });
 
-    // Delete
+    // Delete row
     tr.querySelector(".delBtn").addEventListener("click",async()=>{
       if(!confirm("Delete entry?"))return;
       const col=item.type==="income"?"incomes":"expenses";
@@ -430,13 +300,3 @@ filterType.addEventListener("change",refreshAll);
 filterCat.addEventListener("input",refreshAll);
 
 </script>
-
-<script>
-if("serviceWorker" in navigator){
-  window.addEventListener("load",()=>{
-    navigator.serviceWorker.register("./service-worker.js");
-  });
-}
-</script>
-</body>
-</html>
