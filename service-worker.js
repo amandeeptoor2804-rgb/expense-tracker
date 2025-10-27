@@ -1,5 +1,5 @@
 // service-worker.js — Expense Tracker
-const CACHE_VERSION = 'v6.4.1'; // bump this every time we deploy new UI
+const CACHE_VERSION = 'v6.4.3'; // bump this every time we deploy new UI
 const CACHE_NAME = `expense-tracker-${CACHE_VERSION}`;
 
 const APP_SHELL = [
