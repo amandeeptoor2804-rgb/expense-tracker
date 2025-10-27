@@ -1,14 +1,8 @@
 <script type="module">
 /* ---------------- Firebase Setup ---------------- */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
-import { 
-  getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged 
-} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
-import { 
-  getFirestore, collection, addDoc, getDocs, doc,
-  getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp,
-  query, where 
-} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+import { getFirestore, collection, addDoc, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp, query, where } from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
 // --- Firebase config (yours) ---
 const firebaseConfig = {
@@ -42,7 +36,8 @@ const filterType=$("filterType");
 const filterCat=$("filterCat");
 const rowsEl=$("rows");
 
-const typeRadios = Array.from(document.querySelectorAll("input[name='entType']"));
+// Add/visibility rows
+const typeRadios = Array.from(document.querySelectorAll('input[name="entType"]'));
 const incomeRow = document.getElementById("incomeRow");
 const expenseRow = document.getElementById("expenseRow");
 const categoryInput = document.getElementById("category");
@@ -50,7 +45,6 @@ const expCardSelect = document.getElementById("expCardSelect");
 
 function fmt(n){ return `$${(Number(n)||0).toFixed(2)}`; }
 function today(){ return new Date().toISOString().slice(0,10); }
-
 $("date").value = today();
 
 /* ---------------- Auth ---------------- */
@@ -67,7 +61,7 @@ onAuthStateChanged(auth, async (user)=>{
     loginCard.classList.add("hidden");
     appCard.classList.remove("hidden");
     await ensureAccountSetup(user.uid);
-    updateFormVisibility();
+    updateFormVisibility(); // ensure correct set on entry
     await refreshAll();
   } else {
     loginCard.classList.remove("hidden");
@@ -100,40 +94,7 @@ async function ensureAccountSetup(uid){
 
 /* ---------------- Show/Hide fields per type ---------------- */
 function updateFormVisibility() {
-  const t = document.querySelector("input[name='entType']:checked").value;
-
-  // Income: PHC/UBC only
-  if (t === "income") {
-    incomeRow.classList.remove("hidden");
-    expenseRow.classList.add("hidden");
-    categoryInput.classList.add("hidden");
-    expCardSelect.classList.add("hidden");
-  }
-  // Expense (debit): Category only
-  if (t === "expense") {
-    incomeRow.classList.add("hidden");
-    expenseRow.classList.remove("hidden");
-    categoryInput.classList.remove("hidden");
-    expCardSelect.classList.add("hidden");
-  }
-  // Transfer to card: Card picker only
-  if (t === "transfer") {
-    incomeRow.classList.add("hidden");
-    expenseRow.classList.remove("hidden");
-    categoryInput.classList.add("hidden");
-    expCardSelect.classList.remove("hidden");
-  }
-}
-typeRadios.forEach(r => r.addEventListener("change", updateFormVisibility));
-// --- Show/Hide the proper fields based on selected type (v6.4) ---
-const typeRadios = Array.from(document.querySelectorAll("input[name='entType']"));
-const incomeRow = document.getElementById("incomeRow");
-const expenseRow = document.getElementById("expenseRow");
-const categoryInput = document.getElementById("category");
-const expCardSelect = document.getElementById("expCardSelect");
-
-function updateFormVisibility() {
-  const t = document.querySelector("input[name='entType']:checked")?.value || "income";
+  const t = document.querySelector('input[name="entType"]:checked')?.value || "income";
 
   if (t === "income") {
     incomeRow.classList.remove("hidden");
@@ -145,24 +106,22 @@ function updateFormVisibility() {
     expenseRow.classList.remove("hidden");
     categoryInput.classList.remove("hidden");
     expCardSelect.classList.add("hidden");
-  } else { // transfer (Deposit to Credit Card)
+  } else { // transfer
     incomeRow.classList.add("hidden");
     expenseRow.classList.remove("hidden");
     categoryInput.classList.add("hidden");
     expCardSelect.classList.remove("hidden");
   }
 }
-
-// hook up listeners + set initial state
 typeRadios.forEach(r => r.addEventListener("change", updateFormVisibility));
 document.addEventListener("DOMContentLoaded", updateFormVisibility);
-updateFormVisibility();
+
 /* ---------------- Add Entry ---------------- */
 $("addBtn").addEventListener("click", async ()=>{
   const user = auth.currentUser;
   if(!user){ alert("Not signed in."); return; }
 
-  const t = document.querySelector("input[name='entType']:checked").value;
+  const t = document.querySelector('input[name="entType"]:checked').value;
   const amt = Number($("amount").value||0);
   if(amt<=0){ alert("Enter valid amount"); return; }
 
